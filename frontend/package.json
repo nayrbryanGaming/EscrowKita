@@ -2,19 +2,26 @@
   "name": "escrowkita-frontend",
   "version": "0.1.0",
   "private": true,
+  "resolutions": {
+    "typescript": "^5.9.3"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start"
   },
   "dependencies": {
+    "@radix-ui/react-icons": "latest",
+    "@tanstack/react-query": "^5.90.19",
+    "@walletconnect/ethereum-provider": "latest",
+    "framer-motion": "latest",
     "next": "14.2.35",
     "react": "18.2.0",
     "react-dom": "18.2.0",
-    "wagmi": "latest",
-    "viem": "latest",
-    "@walletconnect/ethereum-provider": "latest",
-    "framer-motion": "latest",
-    "@radix-ui/react-icons": "latest"
+    "viem": "1.21.4",
+    "wagmi": "1.4.6"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
   }
 }

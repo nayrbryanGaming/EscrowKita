@@ -2,10 +2,23 @@
 import { useEffect } from 'react';
 
 
-import { createPublicClient, http, parseEventLogs, getContractEvents } from "viem";
+
+import { createPublicClient, http, Log } from "viem";
 import { baseSepolia } from "viem/chains";
 
-export function useEscrowEvents(contractAddress: string, abi: any, onEvent?: (ev: any) => void) {
+
+// Strongly typed event structure for Escrow events
+export type EscrowEvent = {
+  name: string;
+  decoded?: { args?: Record<string, unknown> } | Record<string, unknown>;
+  log?: Log;
+};
+
+export function useEscrowEvents<TAbi = any>(
+  contractAddress: string,
+  abi: TAbi[],
+  onEvent?: (ev: EscrowEvent) => void
+) {
   useEffect(() => {
     if (!contractAddress || !abi) return;
     const rpc = process.env.NEXT_PUBLIC_BASE_SEPOLIA_RPC || process.env.BASE_SEPOLIA_RPC || "https://base-sepolia.g.alchemy.com/v2/1SMOMr-qJJbullsuZdLED";
@@ -14,19 +27,21 @@ export function useEscrowEvents(contractAddress: string, abi: any, onEvent?: (ev
     let cancelled = false;
     async function pollEvents() {
       try {
-        // Get latest block
         const latest = await client.getBlockNumber();
-        // Query last 10000 blocks for EscrowCreated events
         const fromBlock = latest > 10000n ? latest - 10000n : 0n;
         const logs = await client.getLogs({
           address: contractAddress as `0x${string}`,
           fromBlock,
           toBlock: latest,
-          events: abi.filter((x: any) => x.type === "event"),
+          events: (abi as any[]).filter((x: any) => x.type === "event"),
         });
-        const events = parseEventLogs({ abi, logs });
+        // For each log, just pass the log object to onEvent for now
         if (!cancelled && onEvent) {
-          events.forEach(ev => onEvent(ev));
+          logs.forEach(log => onEvent({
+            name: log.eventName || 'Unknown',
+            decoded: log,
+            log: log,
+          }));
         }
       } catch (err) {
         // ignore errors for now

@@ -52,10 +52,10 @@ export function MultiWalletConnect() {
                 key={connector.id}
                 className="btn btn-primary flex items-center gap-2 justify-center shadow transition-transform hover:scale-105"
                 onClick={() => connect({ connector })}
-                disabled={status === 'pending'}
+                disabled={status === 'loading'}
               >
                 <span className="font-semibold">{connector.name}</span>
-                {status === 'pending' && <span className="ml-2">⏳</span>}
+                {status === 'loading' && <span className="ml-2">⏳</span>}
               </button>
             ))}
           </div>

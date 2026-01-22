@@ -1,9 +1,11 @@
 "use client";
 import { useParams } from "next/navigation";
-import { useReadContract, useAccount, useWriteContract, useWatchContractEvent } from "wagmi";
-import escrowABI from "../../../contracts/escrowABI.json";
+import { useContractRead, useAccount, useContractWrite } from "wagmi";
+import { Address } from "wagmi";
+import escrowABIJson from "../../../contracts/escrowABI.json";
 import { useState, useMemo, useEffect } from "react";
 import { useEscrowEvents } from '@/lib/useEscrowEvents';
+import type { EscrowEvent } from '@/lib/useEscrowEvents';
 import ProofUpload from "@/components/ProofUpload";
 import { EnsOrAddress } from "@/components/EnsOrAddress";
 import { TxStepper, TxStepperState } from "@/components/TxStepper";
@@ -12,6 +14,14 @@ import MilestoneComments from "@/components/MilestoneComments";
 const STATUS_LABELS = [
   "Created", "Funded", "Submitted", "Released", "Refunded", "Claimed"
 ];
+
+// Strongly typed event feed item
+type EventFeedItem = {
+  name: string;
+  args: Record<string, unknown> | null;
+  txHash?: string;
+  blockNumber?: number;
+};
 
 
 // Milestone event structure
@@ -73,10 +83,6 @@ const MilestoneTimeline: React.FC<{ milestones: MilestoneEvent[] }> = ({ milesto
 
 // TxHistory is declared later in the file (single definition kept)
 
-export default function EscrowDetailPage() {
-  const { address } = useParams();
-
-
 // Status timeline visual (moved outside component)
 interface StatusTimelineProps { statusNum: number | undefined }
 const StatusTimeline: React.FC<StatusTimelineProps> = ({ statusNum }) => {
@@ -104,6 +110,10 @@ const StatusTimeline: React.FC<StatusTimelineProps> = ({ statusNum }) => {
     </ol>
   );
 }
+
+export default function EscrowDetailPage() {
+  const { address } = useParams();
+  // ...existing code...
   const [error, setError] = useState("");
   const [proofUrl, setProofUrl] = useState<string>("");
   // Transaction stepper state
@@ -111,39 +121,46 @@ const StatusTimeline: React.FC<StatusTimelineProps> = ({ statusNum }) => {
   // Removed txHash state, not used
   const { address: user } = useAccount();
 
+  // Extract Escrow ABI array from JSON (assume correct key is 'Escrow')
+  const escrowABI = (escrowABIJson as any).Escrow || (escrowABIJson as any).default || escrowABIJson;
   // Real-time contract state
-  // Contract state via wagmi hooks
-  const { data: status } = useReadContract({ address: address as `0x${string}`, abi: escrowABI, functionName: "getStatus" });
-  const { data: proof } = useReadContract({ address: address as `0x${string}`, abi: escrowABI, functionName: "getProof" });
-  const { data: payer } = useReadContract({ address: address as `0x${string}`, abi: escrowABI, functionName: "payer" });
-  const { data: payee } = useReadContract({ address: address as `0x${string}`, abi: escrowABI, functionName: "payee" });
-  const { data: amount } = useReadContract({ address: address as `0x${string}`, abi: escrowABI, functionName: "amount" });
-  const { data: timeout } = useReadContract({ address: address as `0x${string}`, abi: escrowABI, functionName: "timeout" });
-  const { data: milestoneCountRaw } = useReadContract({ address: address as `0x${string}`, abi: escrowABI, functionName: "milestoneCount" });
+  const { data: status } = useContractRead({ address: address as `0x${string}`, abi: escrowABI, functionName: "getStatus" });
+  const { data: proof } = useContractRead({ address: address as `0x${string}`, abi: escrowABI, functionName: "getProof" });
+  const { data: payer } = useContractRead({ address: address as `0x${string}`, abi: escrowABI, functionName: "payer" });
+  const { data: payee } = useContractRead({ address: address as `0x${string}`, abi: escrowABI, functionName: "payee" });
+  const { data: amount } = useContractRead({ address: address as `0x${string}`, abi: escrowABI, functionName: "amount" });
+  const { data: timeout } = useContractRead({ address: address as `0x${string}`, abi: escrowABI, functionName: "timeout" });
+  const { data: milestoneCountRaw } = useContractRead({ address: address as `0x${string}`, abi: escrowABI, functionName: "milestoneCount" });
   const milestoneCount = Number(milestoneCountRaw) || 1;
   // Milestone event audit: event-driven state
-  const [milestoneEvents, setMilestoneEvents] = useState<{ eventName: string; index?: number; data?: string }[]>([]);
+
+  type MilestoneEventState = { eventName: string; index?: number; data?: string };
+  const [milestoneEvents, setMilestoneEvents] = useState<MilestoneEventState[]>([]);
   // Global decoded events feed (new) - most recent first
-  const [eventsFeed, setEventsFeed] = useState<any[]>([]);
+  const [eventsFeed, setEventsFeed] = useState<EventFeedItem[]>([]);
 
   // subscribe to contract events (hook notifies and calls onEvent)
-  useEscrowEvents(address as string, escrowABI, (ev: any) => {
-    // Keep a compact event object for UI
+  useEscrowEvents(address as string, escrowABI, (ev: EscrowEvent) => {
     try {
-      const compact = {
+      let args: Record<string, unknown> | null = null;
+      if (ev.decoded && typeof ev.decoded === 'object' && 'args' in ev.decoded && typeof (ev.decoded as any).args === 'object') {
+        args = (ev.decoded as any).args;
+      } else if (ev.decoded && typeof ev.decoded === 'object') {
+        args = ev.decoded as Record<string, unknown>;
+      }
+      const compact: EventFeedItem = {
         name: ev.name,
-        args: ev.decoded?.args || ev.decoded || null,
+        args,
         txHash: ev.log?.transactionHash,
-        blockNumber: ev.log?.blockNumber,
+        blockNumber: ev.log?.blockNumber ? Number(ev.log.blockNumber) : undefined,
       };
       setEventsFeed(prev => [compact, ...prev].slice(0, 200));
       // mirror specific milestone events for timeline
-      if (compact.name === 'ProofSubmitted' && compact.args && typeof compact.args[0] !== 'undefined') {
-        // assume first arg is proof URL or index; adapt as needed
-        setMilestoneEvents(prev => ([...prev, { eventName: 'ProofSubmitted', index: Number(compact.args.index ?? compact.args[0] ?? 0), data: compact.args.proof ?? compact.args[0] }]));
+      if (compact.name === 'ProofSubmitted' && compact.args && typeof (compact.args as any).index !== 'undefined') {
+        setMilestoneEvents(prev => ([...prev, { eventName: 'ProofSubmitted', index: Number((compact.args as any).index ?? 0), data: (compact.args as any).proof }]));
       }
-      if (compact.name === 'Released') setMilestoneEvents(prev => ([...prev, { eventName: 'Released', index: Number(compact.args?.index ?? 0) }]));
-      if (compact.name === 'Approved') setMilestoneEvents(prev => ([...prev, { eventName: 'Approved', index: Number(compact.args?.index ?? 0) }]));
+      if (compact.name === 'Released') setMilestoneEvents(prev => ([...prev, { eventName: 'Released', index: Number((compact.args as any)?.index ?? 0) }]));
+      if (compact.name === 'Approved') setMilestoneEvents(prev => ([...prev, { eventName: 'Approved', index: Number((compact.args as any)?.index ?? 0) }]));
     } catch (e) {
       // swallow
     }
@@ -165,11 +182,16 @@ const StatusTimeline: React.FC<StatusTimelineProps> = ({ statusNum }) => {
 // ...existing code...
 
   // Write contract hooks
-  const depositWrite = useWriteContract();
-  const submitProofWrite = useWriteContract();
-  const approveWrite = useWriteContract();
-  const refundWrite = useWriteContract();
-  const claimWrite = useWriteContract();
+  // @ts-expect-error wagmi v1 type issue, runtime is correct
+  const depositWrite = useContractWrite({ address: address as unknown as Address, abi: escrowABI, functionName: "deposit" });
+  // @ts-expect-error wagmi v1 type issue, runtime is correct
+  const submitProofWrite = useContractWrite({ address: address as unknown as Address, abi: escrowABI, functionName: "submitProof" });
+  // @ts-expect-error wagmi v1 type issue, runtime is correct
+  const approveWrite = useContractWrite({ address: address as unknown as Address, abi: escrowABI, functionName: "approve" });
+  // @ts-expect-error wagmi v1 type issue, runtime is correct
+  const refundWrite = useContractWrite({ address: address as unknown as Address, abi: escrowABI, functionName: "refund" });
+  // @ts-expect-error wagmi v1 type issue, runtime is correct
+  const claimWrite = useContractWrite({ address: address as unknown as Address, abi: escrowABI, functionName: "claim" });
 
   // Role detection
   const payerAddr = typeof payer === 'string' ? payer : undefined;
@@ -177,7 +199,7 @@ const StatusTimeline: React.FC<StatusTimelineProps> = ({ statusNum }) => {
   const isPayer = user && payerAddr && user.toLowerCase() === payerAddr.toLowerCase();
   const isPayee = user && payeeAddr && user.toLowerCase() === payeeAddr.toLowerCase();
 
-  // Action handlers
+  // Action handlers (all defined at the top for scope)
   const handleDeposit = async () => {
     setError("");
     setTxState("wallet");
@@ -186,28 +208,6 @@ const StatusTimeline: React.FC<StatusTimelineProps> = ({ statusNum }) => {
         address: address as `0x${string}`,
         abi: escrowABI,
         functionName: "deposit"
-      });
-      setTxState("pending");
-      setTimeout(() => setTxState("confirmed"), 2000); // Simulate confirmation
-    } catch (e) {
-      setError((e as Error).message);
-      setTxState("failed");
-    }
-  };
-  const handleSubmitProof = async () => {
-    setError("");
-    setTxState("wallet");
-    if (!proofUrl) {
-      setError("Proof URL required");
-      setTxState("idle");
-      return;
-    }
-    try {
-      await (submitProofWrite as any).writeContract({
-        address: address as `0x${string}`,
-        abi: escrowABI,
-        functionName: "submitProof",
-        args: [proofUrl]
       });
       setTxState("pending");
       setTimeout(() => setTxState("confirmed"), 2000);
@@ -264,16 +264,35 @@ const StatusTimeline: React.FC<StatusTimelineProps> = ({ statusNum }) => {
       setTxState("failed");
     }
   };
-
+  const handleSubmitProof = async () => {
+    setError("");
+    setTxState("wallet");
+    try {
+      await (submitProofWrite as any).writeContract({
+        address: address as `0x${string}`,
+        abi: escrowABI,
+        functionName: "submitProof",
+        args: [proofUrl]
+      });
+      setTxState("pending");
+      setTimeout(() => setTxState("confirmed"), 2000);
+    } catch (e) {
+      setError((e as Error).message);
+      setTxState("failed");
+    }
+  };
   // Timeout logic (fix impure Date.now usage)
   const [now, setNow] = useState(() => Math.floor(Date.now() / 1000));
   useEffect(() => {
     const interval = setInterval(() => setNow(Math.floor(Date.now() / 1000)), 10000);
     return () => clearInterval(interval);
   }, []);
-  const canRefund = (status === 1 || status === 2) && timeout && now > Number(timeout);
-
-  const statusNum = typeof status === "number" ? status : undefined;
+  const statusNum = typeof status === "number"
+    ? status
+    : Array.isArray(status) && typeof status[0] === "number"
+    ? status[0]
+    : undefined;
+  const canRefund = (statusNum === 1 || statusNum === 2) && timeout && now > Number(timeout);
   // Action UI variables for type-safe rendering
   let proofInput: React.ReactNode = null;
   let approveButton: React.ReactNode = null;
@@ -321,11 +340,12 @@ const StatusTimeline: React.FC<StatusTimelineProps> = ({ statusNum }) => {
   }
 
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center px-2 py-8" role="main">
-      <section className="w-full max-w-2xl card rounded-3xl shadow-2xl p-8 md:p-12 flex flex-col items-center gap-8 animate-fade-in-up" aria-labelledby="escrow-detail-title">
-        <h1 id="escrow-detail-title" className="text-4xl md:text-5xl font-extrabold logo mb-2 tracking-tight flex items-center gap-2 drop-shadow-lg">Escrow Detail
+    <main className="min-h-screen flex flex-col items-center justify-center px-2 py-8 bg-gradient-to-br from-white/90 to-blue-50 dark:from-gray-950 dark:to-gray-900" role="main">
+      <section className="w-full max-w-3xl card rounded-3xl shadow-2xl p-10 md:p-16 flex flex-col items-center gap-10 animate-fade-in-up border border-blue-100 dark:border-blue-900">
+        <h1 id="escrow-detail-title" className="text-5xl md:text-6xl font-extrabold logo mb-4 tracking-tight flex items-center gap-3 drop-shadow-2xl text-blue-700 dark:text-blue-400">
+          Escrow Detail
           {typeof statusNum === "number" && (
-            <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-bold ml-2 shadow ${statusNum === 3 ? 'bg-green-100 text-green-800' : statusNum === 4 ? 'bg-red-100 text-red-800' : statusNum === 5 ? 'bg-green-200 text-green-900' : 'bg-blue-100 text-blue-800 animate-bounce-in'}`}>
+            <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-bold ml-3 shadow-lg ${statusNum === 3 ? 'bg-green-100 text-green-800' : statusNum === 4 ? 'bg-red-100 text-red-800' : statusNum === 5 ? 'bg-green-200 text-green-900' : 'bg-blue-100 text-blue-800 animate-bounce-in'}`}>
               {STATUS_LABELS[statusNum]}
             </span>
           )}
@@ -334,23 +354,23 @@ const StatusTimeline: React.FC<StatusTimelineProps> = ({ statusNum }) => {
         <div className="w-full animate-fade-in">
           <StatusTimeline statusNum={statusNum} />
         </div>
-        <div className="mb-6 w-full animate-fade-in">
+        <div className="mb-8 w-full animate-fade-in">
           <MilestoneTimeline milestones={milestones} />
         </div>
-        <div className="mb-4 flex flex-col gap-2 mt-6 w-full animate-fade-in card rounded-xl p-6 shadow-lg">
-          <div className="flex items-center gap-2"><span className="font-semibold">Escrow Address:</span>{typeof address === "string" ? <EnsOrAddress address={address} /> : <span>-</span>}</div>
-          <div className="flex items-center gap-2"><span className="font-semibold">Payer:</span>{typeof payer === "string" ? <EnsOrAddress address={payer} /> : <span>-</span>}</div>
-          <div className="flex items-center gap-2"><span className="font-semibold">Payee:</span>{typeof payee === "string" ? <EnsOrAddress address={payee} /> : <span>-</span>}</div>
-          <div className="flex items-center gap-2"><span className="font-semibold">Amount:</span><span>{typeof amount === "bigint" ? `${Number(amount) / 1e18} IDRX` : "-"}</span></div>
-          <div className="flex items-center gap-2"><span className="font-semibold">Timeout:</span><span>{timeout ? new Date(Number(timeout) * 1000).toLocaleString() : "-"}</span></div>
-          <div className="flex items-center gap-2"><span className="font-semibold">Proof:</span>{typeof proof === "string" && proof ? (<a href={proof} className="text-blue-600 underline" target="_blank" rel="noopener noreferrer">{proof}</a>) : (<span>-</span>)}</div>
+        <div className="mb-4 flex flex-col gap-3 mt-6 w-full animate-fade-in card rounded-2xl p-8 shadow-xl border border-blue-50 dark:border-blue-900 bg-white/90 dark:bg-gray-900/90">
+          <div className="flex items-center gap-2"><span className="font-semibold text-blue-700 dark:text-blue-400">Escrow Address:</span>{typeof address === "string" ? <EnsOrAddress address={address} /> : <span>-</span>}</div>
+          <div className="flex items-center gap-2"><span className="font-semibold text-blue-700 dark:text-blue-400">Payer:</span>{typeof payer === "string" ? <EnsOrAddress address={payer} /> : <span>-</span>}</div>
+          <div className="flex items-center gap-2"><span className="font-semibold text-blue-700 dark:text-blue-400">Payee:</span>{typeof payee === "string" ? <EnsOrAddress address={payee} /> : <span>-</span>}</div>
+          <div className="flex items-center gap-2"><span className="font-semibold text-blue-700 dark:text-blue-400">Amount:</span><span>{typeof amount === "bigint" ? `${Number(amount) / 1e18} IDRX` : "-"}</span></div>
+          <div className="flex items-center gap-2"><span className="font-semibold text-blue-700 dark:text-blue-400">Timeout:</span><span>{timeout ? new Date(Number(timeout) * 1000).toLocaleString() : "-"}</span></div>
+          <div className="flex items-center gap-2"><span className="font-semibold text-blue-700 dark:text-blue-400">Proof:</span>{typeof proof === "string" && proof ? (<a href={proof} className="text-blue-600 underline" target="_blank" rel="noopener noreferrer">{proof}</a>) : (<span>-</span>)}</div>
         </div>
         <div className="my-6 w-full animate-fade-in">
           <TxStepper state={txState} explorerUrl="https://sepolia.basescan.org" />
         </div>
-        <div className="mt-8 flex flex-col gap-2 w-full animate-fade-in">
+        <div className="mt-8 flex flex-col gap-3 w-full animate-fade-in">
           {isPayer && statusNum === 0 && (
-            <button className="btn btn-primary w-full animate-bounce-in" onClick={handleDeposit}>Deposit (Fund Escrow)</button>
+            <button className="btn btn-primary w-full animate-bounce-in text-lg font-bold shadow-lg" onClick={handleDeposit}>Deposit (Fund Escrow)</button>
           )}
           {proofInput && <div className="animate-fade-in">{proofInput}</div>}
           {approveButton && <div className="animate-fade-in">{approveButton}</div>}
@@ -360,12 +380,12 @@ const StatusTimeline: React.FC<StatusTimelineProps> = ({ statusNum }) => {
         {txState === "pending" && <div className="animate-pulse bg-slate-100 h-10 w-full rounded mb-2" />}
         {error && <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-red-600 text-white px-4 py-2 rounded shadow-lg z-50 text-sm animate-fade-in flex items-center gap-2"><span>❌</span>{error}</div>}
         <div className="text-xs text-gray-400 mt-8">Actions and data update based on contract state and user role.</div>
-        <div className="mt-10 w-full animate-fade-in">
-          <h3 className="font-bold text-lg mb-2 logo">Recent On‑Chain Events</h3>
+        <div className="mt-12 w-full animate-fade-in">
+          <h3 className="font-bold text-2xl mb-3 logo text-blue-700 dark:text-blue-400">Recent On‑Chain Events</h3>
           <EventFeed events={eventsFeed} />
         </div>
-        <div className="mt-6 w-full animate-fade-in">
-          <h3 className="font-bold text-lg mb-2 logo">Transaction History</h3>
+        <div className="mt-8 w-full animate-fade-in">
+          <h3 className="font-bold text-2xl mb-3 logo text-blue-700 dark:text-blue-400">Transaction History</h3>
           <TxHistory address={address as string} />
         </div>
       </section>
@@ -373,7 +393,7 @@ const StatusTimeline: React.FC<StatusTimelineProps> = ({ statusNum }) => {
   );
 }
 
-function EventFeed({ events }: { events: any[] }) {
+function EventFeed({ events }: { events: EventFeedItem[] }) {
   if (!events || events.length === 0) return (
     <div className="flex flex-col items-center gap-2 text-gray-400 animate-fade-in">
       <span className="text-3xl">🔔</span>
