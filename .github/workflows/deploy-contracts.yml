@@ -1,0 +1,36 @@
+name: Deploy Contracts (manual)
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install dependencies (contracts)
+        working-directory: ./contracts
+        run: |
+          npm ci
+
+      - name: Compile & Deploy
+        working-directory: ./contracts
+        env:
+          DEPLOYER_PRIVATE_KEY: ${{ secrets.DEPLOYER_PRIVATE_KEY }}
+          BASE_SEPOLIA_RPC: ${{ secrets.BASE_SEPOLIA_RPC }}
+        run: |
+          npm run compile
+          npm run deploy
+
+      - name: Upload frontend env as artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-env
+          path: ./frontend/.env.local

@@ -1,0 +1,77 @@
+{
+  "_format": "hh-sol-cache-2",
+  "files": {
+    "E:\\000VSCODE PROJECT MULAI DARI DESEMBER 2025\\EscrowKita\\contracts\\contracts\\Escrow.sol": {
+      "lastModificationDate": 1768980391087,
+      "contentHash": "f33b735b5a4902f42fc531af28d19a07",
+      "sourceName": "contracts/Escrow.sol",
+      "solcConfig": {
+        "version": "0.8.18",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.8.18"
+      ],
+      "artifacts": [
+        "Escrow"
+      ]
+    },
+    "E:\\000VSCODE PROJECT MULAI DARI DESEMBER 2025\\EscrowKita\\contracts\\contracts\\EscrowFactory.sol": {
+      "lastModificationDate": 1768980398426,
+      "contentHash": "b3d2d98bbb70e27d8a38c1c791e88d9b",
+      "sourceName": "contracts/EscrowFactory.sol",
+      "solcConfig": {
+        "version": "0.8.18",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "./Escrow.sol"
+      ],
+      "versionPragmas": [
+        "^0.8.18"
+      ],
+      "artifacts": [
+        "EscrowFactory"
+      ]
+    }
+  }
+}

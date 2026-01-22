@@ -1,0 +1,44 @@
+{
+  "EscrowFactory": [
+    {
+      "anonymous": false,
+      "inputs": [
+        { "indexed": true, "internalType": "address", "name": "escrowAddress", "type": "address" },
+        { "indexed": true, "internalType": "address", "name": "payer", "type": "address" },
+        { "indexed": true, "internalType": "address", "name": "payee", "type": "address" },
+        { "indexed": false, "internalType": "address", "name": "arbiter", "type": "address" },
+        { "indexed": false, "internalType": "uint256", "name": "amount", "type": "uint256" }
+      ],
+      "name": "EscrowCreated",
+      "type": "event"
+    },
+    {
+      "inputs": [],
+      "name": "allEscrows",
+      "outputs": [ { "internalType": "address[]", "name": "", "type": "address[]" } ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        { "internalType": "address", "name": "payer", "type": "address" },
+        { "internalType": "address", "name": "payee", "type": "address" },
+        { "internalType": "address", "name": "arbiter", "type": "address" },
+        { "internalType": "uint256", "name": "amount", "type": "uint256" }
+      ],
+      "name": "createEscrow",
+      "outputs": [ { "internalType": "address", "name": "", "type": "address" } ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [ { "internalType": "uint256", "name": "", "type": "uint256" } ],
+      "name": "escrows",
+      "outputs": [ { "internalType": "address", "name": "", "type": "address" } ],
+      "stateMutability": "view",
+      "type": "function"
+    }
+  ]
+}
+  { "anonymous": false, "inputs": [], "name": "TimeoutClaimed", "type": "event" }
+]

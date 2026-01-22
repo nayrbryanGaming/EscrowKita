@@ -182,7 +182,7 @@ const StatusTimeline: React.FC<StatusTimelineProps> = ({ statusNum }) => {
     setError("");
     setTxState("wallet");
     try {
-      await depositWrite.writeContract({
+      await (depositWrite as any).writeContract({
         address: address as `0x${string}`,
         abi: escrowABI,
         functionName: "deposit"
@@ -203,7 +203,7 @@ const StatusTimeline: React.FC<StatusTimelineProps> = ({ statusNum }) => {
       return;
     }
     try {
-      await submitProofWrite.writeContract({
+      await (submitProofWrite as any).writeContract({
         address: address as `0x${string}`,
         abi: escrowABI,
         functionName: "submitProof",
@@ -220,7 +220,7 @@ const StatusTimeline: React.FC<StatusTimelineProps> = ({ statusNum }) => {
     setError("");
     setTxState("wallet");
     try {
-      await approveWrite.writeContract({
+      await (approveWrite as any).writeContract({
         address: address as `0x${string}`,
         abi: escrowABI,
         functionName: "approve"
@@ -236,7 +236,7 @@ const StatusTimeline: React.FC<StatusTimelineProps> = ({ statusNum }) => {
     setError("");
     setTxState("wallet");
     try {
-      await refundWrite.writeContract({
+      await (refundWrite as any).writeContract({
         address: address as `0x${string}`,
         abi: escrowABI,
         functionName: "refund"
@@ -252,7 +252,7 @@ const StatusTimeline: React.FC<StatusTimelineProps> = ({ statusNum }) => {
     setError("");
     setTxState("wallet");
     try {
-      await claimWrite.writeContract({
+      await (claimWrite as any).writeContract({
         address: address as `0x${string}`,
         abi: escrowABI,
         functionName: "claim"
