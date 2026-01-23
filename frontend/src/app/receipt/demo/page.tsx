@@ -30,12 +30,9 @@ export default function ReceiptDemoPage() {
           payee: lastTx?.to || "-",
           amount: lastTx?.value ? Number(lastTx.value) / 1e18 : "-",
           status: lastTx?.isError === "0" ? "Success" : "Failed",
-          txHash: lastTx?.hash || "-",
-          releasedAt: lastTx?.timeStamp ? new Date(Number(lastTx.timeStamp) * 1000).toLocaleString() : "-",
-        });
-      } catch (e) {
-        setError("Failed to fetch receipt data");
-      }
+          "use client";
+          import Link from "next/link";
+          import { useEffect, useState } from "react";
       setLoading(false);
     }
     fetchData();
