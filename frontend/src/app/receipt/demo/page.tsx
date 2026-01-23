@@ -1,8 +1,6 @@
 "use client";
 import Link from "next/link";
-
 import { useEffect, useState } from "react";
-import Link from "next/link";
 
 export default function ReceiptDemoPage() {
   // Ambil address dari query string (misal: /receipt/demo?address=0x...)
