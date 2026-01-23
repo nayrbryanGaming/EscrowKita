@@ -30,9 +30,6 @@ export default function ReceiptDemoPage() {
           payee: lastTx?.to || "-",
           amount: lastTx?.value ? Number(lastTx.value) / 1e18 : "-",
           status: lastTx?.isError === "0" ? "Success" : "Failed",
-          "use client";
-          import Link from "next/link";
-          import { useEffect, useState } from "react";
       setLoading(false);
     }
     fetchData();
