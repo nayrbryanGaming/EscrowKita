@@ -1,12 +1,14 @@
 "use client";
+
+"use client";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
 export default function ReceiptDemoPage() {
-  // Ambil address dari query string (misal: /receipt/demo?address=0x...)
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const address = urlParams.get("address") || "";
@@ -17,22 +19,27 @@ export default function ReceiptDemoPage() {
     }
     async function fetchData() {
       try {
-        // Fetch contract data (BaseScan API)
         const txUrl = `https://api-sepolia.basescan.org/api?module=account&action=txlist&address=${address}&sort=desc`;
         const txRes = await fetch(txUrl);
         const txData = await txRes.json();
         const lastTx = txData.status === "1" ? txData.result[0] : null;
-        // Fetch contract info (customize as needed)
         setData({
           address,
           payer: lastTx?.from || "-",
           payee: lastTx?.to || "-",
           amount: lastTx?.value ? Number(lastTx.value) / 1e18 : "-",
           status: lastTx?.isError === "0" ? "Success" : "Failed",
+          txHash: lastTx?.hash || "-",
+          releasedAt: lastTx?.timeStamp ? new Date(Number(lastTx.timeStamp) * 1000).toLocaleString() : "-",
+        });
+      } catch (e) {
+        setError("Failed to fetch receipt data");
+      }
       setLoading(false);
     }
     fetchData();
   }, []);
+
   return (
     <main className="min-h-screen flex flex-col items-center justify-center px-2 py-8 bg-gradient-to-br from-white/90 to-blue-50 dark:from-gray-950 dark:to-gray-900">
       <section className="w-full max-w-xl card rounded-3xl shadow-2xl p-10 flex flex-col items-center gap-8 animate-fade-in-up border border-blue-100 dark:border-blue-900 bg-white/90 dark:bg-gray-900/90">
