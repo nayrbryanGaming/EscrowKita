@@ -4,7 +4,7 @@
 import { Providers } from "./providers";
 import { useState, useEffect } from "react";
 import Head from "next/head";
-import { MultiWalletConnect } from "@/components/MultiWalletConnect";
+import MultiWalletConnect from "@/components/MultiWalletConnect";
 import NotificationToaster, { useNotification } from "@/components/NotificationToaster";
 import Image from "next/image";
 import Link from "next/link";

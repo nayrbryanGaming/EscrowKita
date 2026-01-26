@@ -11,7 +11,11 @@ async function main() {
   await factory.waitForDeployment();
 
   const address = await factory.getAddress();
-  const txHash = factory.deploymentTransaction?.hash ?? "";
+  let txHash = "";
+  if (typeof factory.deploymentTransaction === "function") {
+    const tx = factory.deploymentTransaction();
+    txHash = tx && typeof tx.hash === "string" ? tx.hash : "";
+  }
   console.log("EscrowFactory deployed at:", address);
   console.log("Deployment tx:", txHash);
 

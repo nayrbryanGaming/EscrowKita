@@ -1,9 +1,11 @@
 "use client";
+export const dynamic = "force-dynamic";
 import { useParams } from "next/navigation";
 import { useContractRead, useAccount, useContractWrite } from "wagmi";
 import { Address } from "wagmi";
 import escrowABIJson from "../../../contracts/escrowABI.json";
 import { useState, useMemo, useEffect } from "react";
+import { useNotification } from '@/app/providers';
 import { useEscrowEvents } from '@/lib/useEscrowEvents';
 import type { EscrowEvent } from '@/lib/useEscrowEvents';
 import ProofUpload from "@/components/ProofUpload";
@@ -42,20 +44,22 @@ interface ProofInputProps {
 }
 const ProofInput: React.FC<ProofInputProps> = ({ proofUrl, setProofUrl, submittingProof, handleSubmitProof }) => (
   <div className="flex flex-col gap-2">
-    <div className="flex gap-2">
+    <div className="flex gap-2 items-end">
       <input
-        className="input input-bordered flex-1"
+        className="input input-bordered flex-1 focus:ring-2 focus:ring-accent-500 transition"
         placeholder="Proof URL"
         value={proofUrl}
         onChange={e => setProofUrl(e.target.value)}
         disabled={submittingProof}
+        aria-label="Proof URL input"
       />
       <button
-        className="btn btn-primary"
+        className="btn btn-primary shadow-lg px-6 py-2 text-base font-bold rounded-lg transition-all hover:scale-105 focus:ring-2 focus:ring-accent-500"
         disabled={submittingProof || !proofUrl}
         onClick={handleSubmitProof}
+        aria-label="Submit Proof"
       >
-        {submittingProof ? "Submitting..." : "Submit Proof"}
+        {submittingProof ? <span className="animate-pulse">Submitting...</span> : "Submit Proof"}
       </button>
     </div>
     <ProofUpload onUpload={setProofUrl} />
@@ -115,6 +119,7 @@ export default function EscrowDetailPage() {
   const { address } = useParams();
   // ...existing code...
   const [error, setError] = useState("");
+  const { notify } = useNotification();
   const [proofUrl, setProofUrl] = useState<string>("");
   // Transaction stepper state
   const [txState, setTxState] = useState<TxStepperState>("idle");
@@ -211,9 +216,11 @@ export default function EscrowDetailPage() {
       });
       setTxState("pending");
       setTimeout(() => setTxState("confirmed"), 2000);
+      notify("success", "Deposit successful!");
     } catch (e) {
       setError((e as Error).message);
       setTxState("failed");
+      notify("error", (e as Error).message || "Deposit failed");
     }
   };
   const handleApprove = async () => {
@@ -227,9 +234,11 @@ export default function EscrowDetailPage() {
       });
       setTxState("pending");
       setTimeout(() => setTxState("confirmed"), 2000);
+      notify("success", "Escrow approved & released!");
     } catch (e) {
       setError((e as Error).message);
       setTxState("failed");
+      notify("error", (e as Error).message || "Approve failed");
     }
   };
   const handleRefund = async () => {
@@ -243,9 +252,11 @@ export default function EscrowDetailPage() {
       });
       setTxState("pending");
       setTimeout(() => setTxState("confirmed"), 2000);
+      notify("success", "Refund successful!");
     } catch (e) {
       setError((e as Error).message);
       setTxState("failed");
+      notify("error", (e as Error).message || "Refund failed");
     }
   };
   const handleClaim = async () => {
@@ -259,9 +270,11 @@ export default function EscrowDetailPage() {
       });
       setTxState("pending");
       setTimeout(() => setTxState("confirmed"), 2000);
+      notify("success", "Claim successful!");
     } catch (e) {
       setError((e as Error).message);
       setTxState("failed");
+      notify("error", (e as Error).message || "Claim failed");
     }
   };
   const handleSubmitProof = async () => {
@@ -276,9 +289,11 @@ export default function EscrowDetailPage() {
       });
       setTxState("pending");
       setTimeout(() => setTxState("confirmed"), 2000);
+      notify("success", "Proof submitted!");
     } catch (e) {
       setError((e as Error).message);
       setTxState("failed");
+      notify("error", (e as Error).message || "Submit proof failed");
     }
   };
   // Timeout logic (fix impure Date.now usage)
@@ -340,16 +355,22 @@ export default function EscrowDetailPage() {
   }
 
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center px-2 py-8 bg-gradient-to-br from-white/90 to-blue-50 dark:from-gray-950 dark:to-gray-900" role="main">
-      <section className="w-full max-w-3xl card rounded-3xl shadow-2xl p-10 md:p-16 flex flex-col items-center gap-10 animate-fade-in-up border border-blue-100 dark:border-blue-900">
-        <h1 id="escrow-detail-title" className="text-5xl md:text-6xl font-extrabold logo mb-4 tracking-tight flex items-center gap-3 drop-shadow-2xl text-blue-700 dark:text-blue-400">
-          Escrow Detail
-          {typeof statusNum === "number" && (
-            <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-bold ml-3 shadow-lg ${statusNum === 3 ? 'bg-green-100 text-green-800' : statusNum === 4 ? 'bg-red-100 text-red-800' : statusNum === 5 ? 'bg-green-200 text-green-900' : 'bg-blue-100 text-blue-800 animate-bounce-in'}`}>
-              {STATUS_LABELS[statusNum]}
-            </span>
-          )}
-        </h1>
+    <main className="min-h-screen flex flex-col items-center justify-center px-2 py-8 bg-gradient-to-br from-[#f8fafc] via-[#e0f7fa] to-[#e0e7ef] dark:from-[#0A2540] dark:via-[#1e293b] dark:to-[#0b1530] animate-fade-in-up" role="main">
+      <section className="w-full max-w-3xl card rounded-3xl shadow-2xl p-10 md:p-16 flex flex-col items-center gap-10 border border-blue-100 dark:border-blue-900">
+        <div className="w-full flex flex-col md:flex-row items-center justify-between mb-2">
+          <h1 id="escrow-detail-title" className="text-5xl md:text-6xl font-extrabold logo tracking-tight flex items-center gap-4 drop-shadow-2xl text-blue-700 dark:text-blue-400 animate-fade-in-up">
+            Escrow Detail
+          </h1>
+          <span className="badge-proof mt-2 cursor-pointer animate-fade-in-up" title="Lihat bukti escrow di BaseScan">
+            <svg width="18" height="18" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#06B6D4"/><path d="M8 12.5l2.5 2.5L16 9" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            {typeof address === "string" ? <a href={`https://sepolia.basescan.org/address/${address}`} target="_blank" rel="noopener" className="underline">BaseScan Proof</a> : "BaseScan Proof"}
+          </span>
+        </div>
+        {typeof statusNum === "number" && (
+          <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-bold shadow-lg mb-2 ${statusNum === 3 ? 'bg-green-100 text-green-800' : statusNum === 4 ? 'bg-red-100 text-red-800' : statusNum === 5 ? 'bg-green-200 text-green-900' : 'bg-blue-100 text-blue-800 animate-bounce-in'}`}>
+            {STATUS_LABELS[statusNum]}
+          </span>
+        )}
         {/* Status Timeline */}
         <div className="w-full animate-fade-in">
           <StatusTimeline statusNum={statusNum} />
@@ -357,18 +378,25 @@ export default function EscrowDetailPage() {
         <div className="mb-8 w-full animate-fade-in">
           <MilestoneTimeline milestones={milestones} />
         </div>
-        <div className="mb-4 flex flex-col gap-3 mt-6 w-full animate-fade-in card rounded-2xl p-8 shadow-xl border border-blue-50 dark:border-blue-900 bg-white/90 dark:bg-gray-900/90">
+        <div className="mb-4 flex flex-col gap-4 mt-6 w-full animate-fade-in card rounded-3xl p-10 shadow-2xl border border-blue-100 dark:border-blue-900 bg-white/90 dark:bg-gray-900/90">
           <div className="flex items-center gap-2"><span className="font-semibold text-blue-700 dark:text-blue-400">Escrow Address:</span>{typeof address === "string" ? <EnsOrAddress address={address} /> : <span>-</span>}</div>
           <div className="flex items-center gap-2"><span className="font-semibold text-blue-700 dark:text-blue-400">Payer:</span>{typeof payer === "string" ? <EnsOrAddress address={payer} /> : <span>-</span>}</div>
           <div className="flex items-center gap-2"><span className="font-semibold text-blue-700 dark:text-blue-400">Payee:</span>{typeof payee === "string" ? <EnsOrAddress address={payee} /> : <span>-</span>}</div>
           <div className="flex items-center gap-2"><span className="font-semibold text-blue-700 dark:text-blue-400">Amount:</span><span>{typeof amount === "bigint" ? `${Number(amount) / 1e18} IDRX` : "-"}</span></div>
           <div className="flex items-center gap-2"><span className="font-semibold text-blue-700 dark:text-blue-400">Timeout:</span><span>{timeout ? new Date(Number(timeout) * 1000).toLocaleString() : "-"}</span></div>
-          <div className="flex items-center gap-2"><span className="font-semibold text-blue-700 dark:text-blue-400">Proof:</span>{typeof proof === "string" && proof ? (<a href={proof} className="text-blue-600 underline" target="_blank" rel="noopener noreferrer">{proof}</a>) : (<span>-</span>)}</div>
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-blue-700 dark:text-blue-400">Proof:</span>
+            {typeof proof === "string" && proof ? (
+              <a href={proof} className="text-blue-600 underline font-bold hover:text-blue-900 transition" target="_blank" rel="noopener noreferrer" aria-label="View submitted proof">{proof}</a>
+            ) : (
+              <span>-</span>
+            )}
+          </div>
         </div>
         <div className="my-6 w-full animate-fade-in">
           <TxStepper state={txState} explorerUrl="https://sepolia.basescan.org" />
         </div>
-        <div className="mt-8 flex flex-col gap-3 w-full animate-fade-in">
+        <div className="mt-8 flex flex-col gap-4 w-full animate-fade-in">
           {isPayer && statusNum === 0 && (
             <button className="btn btn-primary w-full animate-bounce-in text-lg font-bold shadow-lg" onClick={handleDeposit}>Deposit (Fund Escrow)</button>
           )}
@@ -378,14 +406,14 @@ export default function EscrowDetailPage() {
           {claimButton && <div className="animate-fade-in">{claimButton}</div>}
         </div>
         {txState === "pending" && <div className="animate-pulse bg-slate-100 h-10 w-full rounded mb-2" />}
-        {error && <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-red-600 text-white px-4 py-2 rounded shadow-lg z-50 text-sm animate-fade-in flex items-center gap-2"><span>❌</span>{error}</div>}
+        {/* Error handled by notification toast */}
         <div className="text-xs text-gray-400 mt-8">Actions and data update based on contract state and user role.</div>
         <div className="mt-12 w-full animate-fade-in">
-          <h3 className="font-bold text-2xl mb-3 logo text-blue-700 dark:text-blue-400">Recent On‑Chain Events</h3>
+          <h3 className="font-bold text-3xl mb-3 logo text-blue-700 dark:text-blue-400">Recent On‑Chain Events</h3>
           <EventFeed events={eventsFeed} />
         </div>
         <div className="mt-8 w-full animate-fade-in">
-          <h3 className="font-bold text-2xl mb-3 logo text-blue-700 dark:text-blue-400">Transaction History</h3>
+          <h3 className="font-bold text-3xl mb-3 logo text-blue-700 dark:text-blue-400">Transaction History</h3>
           <TxHistory address={address as string} />
         </div>
       </section>
