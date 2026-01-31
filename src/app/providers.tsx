@@ -33,7 +33,7 @@ function NotificationProvider({ children }: { children: React.ReactNode }) {
 import { ethers } from 'ethers';
 import { WagmiProvider, createConfig, http } from 'wagmi';
 import { baseSepolia } from 'wagmi/chains';
-import { OnchainKitProvider } from '@coinbase/onchainkit';
+// OnchainKit temporarily disabled to satisfy type-check; WagmiProvider handles chain config
 // @walletconnect/ethereum-provider dynamic import will be used for WalletConnect
 // Coinbase Wallet SDK will be dynamically imported when requested
 
@@ -145,14 +145,25 @@ function WalletProvider({ children }: { children: React.ReactNode }) {
   async function connectWalletConnect() {
     try {
       const { EthereumProvider } = await import('@walletconnect/ethereum-provider');
+      const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID;
+      const rpcUrl = process.env.NEXT_PUBLIC_ALCHEMY_API_KEY
+        ? `https://base-sepolia.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_API_KEY}`
+        : (process.env.NEXT_PUBLIC_BASE_RPC || 'https://sepolia.base.org');
       const providerWC = await EthereumProvider.init({
-        projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID,
-        showQrModal: true,
+        projectId: projectId || 'demo',
+        chains: [84532],
         optionalChains: [84532],
+        rpcMap: { 84532: rpcUrl },
+        showQrModal: true,
+        metadata: {
+          name: 'EscrowKita',
+          description: 'Onchain escrow on Base',
+          url: typeof window !== 'undefined' ? window.location.origin : 'https://escrowkita.vercel.app',
+          icons: ['https://escrowkita.vercel.app/escrowkita-logo.svg'],
+        },
       });
       await providerWC.enable();
       (window as any).ethereum = providerWC;
-      // reuse connect flow to set provider/signer
       await connect();
     } catch (err) {
       console.error('WalletConnect connect error', err);
@@ -162,9 +173,9 @@ function WalletProvider({ children }: { children: React.ReactNode }) {
   // Connect using Coinbase Wallet SDK (WalletLink) if available
   async function connectCoinbase() {
     try {
-      const { CoinbaseWallet } = await import('@coinbase/wallet-sdk');
+      const { CoinbaseWalletSDK } = await import('@coinbase/wallet-sdk');
       const APP_NAME = 'EscrowKita';
-      const coinbase = new (CoinbaseWallet as any)({
+      const coinbase = new (CoinbaseWalletSDK as any)({
         appName: APP_NAME,
         darkMode: false,
       });
@@ -206,9 +217,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <NotificationProvider>
       <WagmiProvider config={wagmiConfig}>
-        <OnchainKitProvider apiKey={process.env.NEXT_PUBLIC_ALCHEMY_API_KEY || 'public'} chain={baseSepolia}>
-          <WalletProvider>{children}</WalletProvider>
-        </OnchainKitProvider>
+        <WalletProvider>{children}</WalletProvider>
       </WagmiProvider>
     </NotificationProvider>
   );

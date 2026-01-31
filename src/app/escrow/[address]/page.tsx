@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
+import { CheckCircle, Clock, AlertTriangle } from 'lucide-react';
 import { ethers } from 'ethers';
 import { useWallet } from '../../providers';
 import { useEscrow, type EscrowStatus } from '../../../hooks/useEscrow';
@@ -202,6 +203,21 @@ export default function EscrowDetailPage() {
 
   const statusLabel = STATUS_LABELS[state.status];
   const showCountdown = state.fundedAt && state.status === 'funded' && !state.released && !state.refunded;
+  const finalStatus: EscrowStatus = state.refunded ? 'refunded' : 'released';
+  const steps: { key: EscrowStatus; label: string }[] = [
+    { key: 'created', label: 'Create' },
+    { key: 'funded', label: 'Deposit' },
+    { key: 'submitted', label: 'Proof' },
+    { key: finalStatus, label: state.refunded ? 'Refunded' : 'Released' },
+  ];
+  function isDone(step: EscrowStatus) {
+    if (step === 'created') return true;
+    if (step === 'funded') return ['funded', 'submitted', 'released', 'refunded'].includes(state.status);
+    if (step === 'submitted') return ['submitted', 'released', 'refunded'].includes(state.status);
+    if (step === 'released') return state.released === true;
+    if (step === 'refunded') return state.refunded === true;
+    return false;
+  }
 
   return (
     <div className="min-h-full">
@@ -221,7 +237,7 @@ export default function EscrowDetailPage() {
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm"
+          className="card"
         >
           <p className="text-sm font-medium text-slate-500 mb-1">Status</p>
           <p className="text-2xl font-bold text-darknavy">{statusLabel}</p>
@@ -235,14 +251,38 @@ export default function EscrowDetailPage() {
           )}
         </motion.div>
 
+        {/* Timeline */}
+        {!state.milestones && (
+          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="card">
+            <p className="text-sm font-medium text-slate-500 mb-3">Timeline</p>
+            <div className="flex flex-col md:flex-row md:items-center gap-4 md:gap-6">
+              {steps.map((s, i) => {
+                const done = isDone(s.key);
+                const Icon = done ? CheckCircle : s.key === 'submitted' && state.status === 'funded' ? AlertTriangle : Clock;
+                const color = done ? 'text-green-600' : s.key === 'submitted' && state.status === 'funded' ? 'text-amber-600' : 'text-slate-500';
+                const bg = done ? 'bg-green-50' : s.key === 'submitted' && state.status === 'funded' ? 'bg-amber-50' : 'bg-slate-50';
+                return (
+                  <div key={s.key} className="flex items-center">
+                    <div className={`flex items-center gap-3 px-3 py-2 rounded-lg ${bg} border border-slate-200`}>
+                      <Icon className={`w-4 h-4 ${color}`} />
+                      <span className={`text-sm font-semibold ${done ? 'text-darknavy' : 'text-slate-700'}`}>{s.label}</span>
+                    </div>
+                    {i < steps.length - 1 && <span className="mx-3 hidden md:inline text-slate-400">→</span>}
+                  </div>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
+
         {/* Amount — mono */}
-        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="card">
           <p className="text-sm font-medium text-slate-500 mb-1">Amount</p>
           <p className="font-mono text-2xl font-bold text-darknavy">{formatAmount(state.amount)} ETH</p>
         </div>
 
         {state.milestones && (
-          <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="card">
             <p className="text-sm font-medium text-slate-500 mb-2">Milestones</p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {state.milestones.map((m, i) => (
@@ -270,7 +310,7 @@ export default function EscrowDetailPage() {
 
         {/* Countdown */}
         {showCountdown && state.fundedAt && (
-          <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="card">
             <p className="text-sm font-medium text-slate-500 mb-1">Refund available after (30 days)</p>
             <Countdown fundedAt={state.fundedAt} />
           </div>
@@ -303,7 +343,7 @@ export default function EscrowDetailPage() {
         </div>
 
         {/* Parties */}
-        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm space-y-3">
+        <div className="card space-y-3">
           <p className="text-sm font-medium text-slate-500">Payer</p>
           <p className="font-mono text-sm text-text break-all">{state.payer ?? '—'}</p>
           <p className="text-sm font-medium text-slate-500 mt-4">Payee</p>
@@ -311,7 +351,7 @@ export default function EscrowDetailPage() {
         </div>
 
         {/* Actions — role-based */}
-        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm space-y-3">
+        <div className="card space-y-3">
           <p className="text-sm font-medium text-slate-500 mb-4">Actions</p>
           {state.status === 'created' && isPayer && (
             <button

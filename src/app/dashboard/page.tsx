@@ -3,7 +3,6 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import {
-  Shield,
   Menu,
   X,
   Home,
@@ -20,7 +19,6 @@ import {
   DollarSign,
   Users,
   Clock,
-  Download,
   Eye,
   MoreVertical,
   ChevronLeft,
@@ -195,28 +193,18 @@ const recentActivities: Activity[] = [
 // ============= LOGO COMPONENT =============
 const EscrowKitLogo = ({ size = 'default' }: { size?: 'small' | 'default' | 'large' }) => {
   const sizes = {
-    small: 'w-8 h-8',
-    default: 'w-10 h-10',
-    large: 'w-16 h-16',
+    small: 32,
+    default: 40,
+    large: 64,
   };
-
+  const px = sizes[size] || sizes.default;
   return (
     <div className="flex items-center gap-3">
-      <div className={`${sizes[size]} relative`}>
-        <div className="absolute inset-0 bg-gradient-to-br from-indigo-600 to-blue-500 rounded-lg rotate-6 opacity-20"></div>
-        <div className="relative bg-gradient-to-br from-indigo-600 to-blue-500 rounded-lg p-2 shadow-lg">
-          <Shield className="w-full h-full text-white" strokeWidth={2.5} />
-          <div className="absolute inset-0 flex items-center justify-center">
-            <DollarSign className="w-1/2 h-1/2 text-white" strokeWidth={3} />
-          </div>
-        </div>
-      </div>
+      <img src="/escrowkita-logo.svg" alt="EscrowKita" width={px} height={px} className="rounded-xl shadow-md" />
       {size !== 'small' && (
         <div className="flex flex-col">
-          <h1 className="text-xl font-bold bg-gradient-to-r from-indigo-600 to-blue-500 bg-clip-text text-transparent">
-            EscrowKita
-          </h1>
-          <p className="text-xs text-slate-500">Escrow Onchain Aman</p>
+          <h1 className="text-xl font-bold text-slate-800">EscrowKita</h1>
+          <p className="text-xs text-slate-500">Onchain Escrow Platform</p>
         </div>
       )}
     </div>

@@ -36,6 +36,11 @@
   .input-field {
     @apply w-full rounded-lg border border-slate-200 bg-white px-4 py-2.5 font-sans text-text placeholder:text-slate-500 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary;
   }
+  .card { @apply rounded-xl border border-slate-200 bg-white p-6 shadow-sm; }
+  .badge { @apply inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium; }
+  .badge-success { @apply badge bg-success/10 text-success; }
+  .badge-outline { @apply badge border border-slate-200 bg-white text-slate-600 font-mono; }
+  .nav-link { @apply hover:text-blue-600 transition; }
   .font-mono-numeric {
     font-family: var(--font-mono), ui-monospace, monospace;
   }

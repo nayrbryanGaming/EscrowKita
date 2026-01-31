@@ -2,8 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { ethers } from "ethers";
-import abi from "../../../contracts/escrowABI.json";
-import { addressUrl, txUrl } from "../../../lib/constants";
+import { ESCROW_ABI, addressUrl, txUrl } from "../../../lib/constants";
 import { getJsonRpcProvider } from "../../../lib/web3";
 
 type Receipt = {
@@ -30,7 +29,7 @@ export default function ReceiptPage() {
           return;
         }
         const provider = getJsonRpcProvider();
-        const contract = new ethers.Contract(id, abi as any, provider);
+        const contract = new ethers.Contract(id, ESCROW_ABI as ethers.InterfaceAbi, provider);
         const [amountBn, payer, payee, fundedAtBn, released, refunded] = await Promise.all([
           contract.amount(),
           contract.payer(),

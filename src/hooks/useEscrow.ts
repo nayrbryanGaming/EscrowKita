@@ -45,7 +45,7 @@ export function useEscrow(contractAddress: string | undefined): EscrowState {
     async function load() {
       try {
         const provider = getJsonRpcProvider();
-        const contract = new ethers.Contract(contractAddress as string, ESCROW_ABI as any, provider);
+        const contract = new ethers.Contract(contractAddress as string, ESCROW_ABI as ethers.InterfaceAbi, provider);
         const [amount, payer, payee, arbiter, fundedAt, released, refunded, submitted] = await Promise.all([
           contract.amount().then((v: bigint) => v.toString()),
           contract.payer(),
@@ -68,7 +68,7 @@ export function useEscrow(contractAddress: string | undefined): EscrowState {
         let tokenAddress: string | null = null;
         let milestonesData: { amount: string; funded: boolean; submitted: boolean; proof?: string | null; released: boolean }[] | undefined;
         try {
-          const erc20c = new ethers.Contract(contractAddress as string, ESCROW_ERC20_ABI as any, provider);
+          const erc20c = new ethers.Contract(contractAddress as string, ESCROW_ERC20_ABI as ethers.InterfaceAbi, provider);
           tokenAddress = await erc20c.token();
         } catch {
           tokenAddress = null;
@@ -84,7 +84,7 @@ export function useEscrow(contractAddress: string | undefined): EscrowState {
                 { internalType: 'bool', name: 'released', type: 'bool' },
               ], stateMutability: 'view', type: 'function' },
             ] as const;
-            const m = new ethers.Contract(contractAddress as string, milestoneAbi as any, provider);
+            const m = new ethers.Contract(contractAddress as string, milestoneAbi as ethers.InterfaceAbi, provider);
             const m0 = await m.milestones(0);
             const m1 = await m.milestones(1);
             milestonesData = [m0, m1].map((x: any) => ({ amount: x.amount.toString(), funded: x.funded, submitted: x.submitted, proof: x.proof, released: x.released }));

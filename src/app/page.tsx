@@ -1,25 +1,47 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Lock, Shield, ArrowRight, Check, Zap } from 'lucide-react';
+import { addressUrl } from '../lib/constants';
 
 const BASESCAN_CONTRACT = process.env.NEXT_PUBLIC_ESCROW_CONTRACT_ADDRESS
   ? `https://sepolia.basescan.org/address/${process.env.NEXT_PUBLIC_ESCROW_CONTRACT_ADDRESS}`
   : 'https://sepolia.basescan.org';
 
+function isAddr(s?: string) {
+  if (!s) return false;
+  return /^0x[a-fA-F0-9]{40}$/.test(s);
+}
+
 export default function Home() {
+  const factoryEth = process.env.NEXT_PUBLIC_ESCROW_FACTORY_ADDRESS || process.env.NEXT_PUBLIC_ESCROW_FACTORY;
+  const factoryErc20 = process.env.NEXT_PUBLIC_ESCROW_FACTORY_ERC20;
+  const factoryMilestone = process.env.NEXT_PUBLIC_ESCROW_FACTORY_MILESTONE;
+  const idrx = process.env.NEXT_PUBLIC_IDRX_ADDRESS;
+
+  const proofs = useMemo(() => {
+    const items: { label: string; href: string }[] = [];
+    if (isAddr(factoryEth)) items.push({ label: 'Factory (ETH)', href: addressUrl(String(factoryEth)) });
+    if (isAddr(factoryErc20)) items.push({ label: 'Factory (IDRX)', href: addressUrl(String(factoryErc20)) });
+    if (isAddr(factoryMilestone)) items.push({ label: 'Factory (Milestone)', href: addressUrl(String(factoryMilestone)) });
+    if (isAddr(idrx)) items.push({ label: 'IDRX Token', href: addressUrl(String(idrx)) });
+    return items;
+  }, [factoryEth, factoryErc20, factoryMilestone, idrx]);
   return (
     <div className="min-h-full">
       {/* HERO */}
-      <section className="pt-12 pb-16 md:pt-20 md:pb-24">
+      <section className="pt-12 pb-16 md:pt-20 md:pb-24 bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl px-6 sm:px-8">
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
           className="max-w-3xl"
         >
+          <div className="mb-4">
+            <span className="badge-outline">Powered by Base Sepolia</span>
+          </div>
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-darknavy tracking-tight leading-tight">
             Get Paid Safely.{' '}
             <span className="text-primary">Without Trusting Anyone.</span>
@@ -43,7 +65,7 @@ export default function Home() {
             </Link>
           </div>
           <div className="mt-8 flex flex-wrap items-center gap-3">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-success/10 text-success text-sm font-medium">
+            <span className="badge-success">
               <Check className="w-4 h-4" />
               Verified on Base
             </span>
@@ -51,10 +73,15 @@ export default function Home() {
               href={BASESCAN_CONTRACT}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-slate-200 bg-white text-slate-600 text-sm font-mono hover:border-primary hover:text-primary transition"
+              className="badge-outline hover:border-primary hover:text-primary"
             >
               View on BaseScan
             </a>
+            {proofs.map((p) => (
+              <a key={p.label} href={p.href} target="_blank" rel="noopener noreferrer" className="badge-outline hover:border-primary hover:text-primary">
+                {p.label}
+              </a>
+            ))}
           </div>
           <div className="mt-10 pt-10 border-t border-slate-200">
             <p className="text-sm font-medium text-slate-500 mb-3">Trust indicators</p>

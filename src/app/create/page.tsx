@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+// Link not used
+import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ethers } from 'ethers';
 import { useWallet, useNotification } from '../providers';
@@ -24,8 +24,9 @@ function isValidAddress(s: string): boolean {
   return /^0x[a-fA-F0-9]{40}$/.test(s);
 }
 
-function humanError(err: any): string {
-  const msg = String(err?.message || err);
+function humanError(err: unknown): string {
+  const maybeMsg = typeof err === 'object' && err && 'message' in (err as { message?: string }) ? (err as { message?: string }).message : undefined;
+  const msg = String(maybeMsg ?? err);
   if (msg.includes('user rejected')) return 'You cancelled the transaction.';
   if (msg.includes('insufficient funds')) return 'Not enough ETH in your wallet for this amount and gas.';
   if (msg.includes('incorrect amount')) return 'Amount must match exactly. Please try again.';
@@ -35,6 +36,7 @@ function humanError(err: any): string {
 
 export default function CreateDealPage() {
   const router = useRouter();
+  const search = useSearchParams();
   const wallet = useWallet();
   const { notify } = useNotification();
   const [step, setStep] = useState(0);
@@ -42,11 +44,10 @@ export default function CreateDealPage() {
     payee: '',
     amountEth: '',
   });
-  const [useIdrx, setUseIdrx] = useState(false);
-  const [useMilestone, setUseMilestone] = useState(false);
+  const [useIdrx, setUseIdrx] = useState(Boolean(search.get('idrx')));
+  const [useMilestone, setUseMilestone] = useState(Boolean(search.get('milestone')));
   const [submitting, setSubmitting] = useState(false);
-  const [createdAddress, setCreatedAddress] = useState<string | null>(null);
-  const [createTxHash, setCreateTxHash] = useState<string | null>(null);
+  // removed unused state
 
   const progressPct = ((step + 1) / WIZARD_STEPS.length) * 100;
 
@@ -109,26 +110,24 @@ export default function CreateDealPage() {
           ], name: 'createEscrowMilestone', outputs: [{ internalType: 'address', name: '', type: 'address' }], stateMutability: 'nonpayable', type: 'function' },
           { inputs: [], name: 'allEscrowsLength', outputs: [{ internalType: 'uint256', name: '', type: 'uint256' }], stateMutability: 'view', type: 'function' },
         ] as const;
-        const factoryM = new ethers.Contract(FACTORY_MILESTONE_ADDRESS, factoryMilestoneAbi as any, signer);
+        const factoryM = new ethers.Contract(FACTORY_MILESTONE_ADDRESS, factoryMilestoneAbi as ethers.InterfaceAbi, signer);
         const tx = await factoryM.createEscrowMilestone(payerAddr, payee, arbiter, IDRX_ADDRESS, totalWei, m1Wei, m2Wei);
-        const receipt = await tx.wait();
-        setCreateTxHash(receipt.hash);
+        const _receipt = await tx.wait();
         const len = await factoryM.allEscrowsLength();
         const idx = Number(len) - 1;
         const escrowAddr = await factoryM.allEscrows(idx);
         const idrxAbi = [
           { inputs: [{ internalType: 'address', name: 'spender', type: 'address' }, { internalType: 'uint256', name: 'value', type: 'uint256' }], name: 'approve', outputs: [{ internalType: 'bool', name: '', type: 'bool' }], stateMutability: 'nonpayable', type: 'function' },
         ] as const;
-        const idrx = new ethers.Contract(IDRX_ADDRESS, idrxAbi as any, signer);
+        const idrx = new ethers.Contract(IDRX_ADDRESS, idrxAbi as ethers.InterfaceAbi, signer);
         const approveTx = await idrx.approve(escrowAddr, m1Wei);
         await approveTx.wait();
         const milestoneAbi = [
           { inputs: [{ internalType: 'uint256', name: 'index', type: 'uint256' }], name: 'fundMilestone', outputs: [], stateMutability: 'nonpayable', type: 'function' },
         ] as const;
-        const escrowM = new ethers.Contract(escrowAddr, milestoneAbi as any, signer);
+        const escrowM = new ethers.Contract(escrowAddr, milestoneAbi as ethers.InterfaceAbi, signer);
         const fundTx = await escrowM.fundMilestone(0);
         const fundReceipt = await fundTx.wait();
-        setCreatedAddress(escrowAddr);
         notify('success', `Milestone 1 funded. View: ${txUrl(fundReceipt.hash)}`);
         setSubmitting(false);
         router.push(`/escrow/${escrowAddr}`);
@@ -136,44 +135,40 @@ export default function CreateDealPage() {
         if (!FACTORY_ERC20_ADDRESS || !IDRX_ADDRESS) {
           throw new Error('ERC20 escrow not configured. Missing factory or IDRX address.');
         }
-        const factory20 = new ethers.Contract(FACTORY_ERC20_ADDRESS, ESCROW_ERC20_FACTORY_ABI as any, signer);
+        const factory20 = new ethers.Contract(FACTORY_ERC20_ADDRESS, ESCROW_ERC20_FACTORY_ABI as ethers.InterfaceAbi, signer);
         const tx = await factory20.createEscrowERC20(payerAddr, payee, arbiter, IDRX_ADDRESS, amountWei);
-        const receipt = await tx.wait();
-        setCreateTxHash(receipt.hash);
+        const _receipt = await tx.wait();
         const all20 = await factory20.allEscrows();
         const escrowAddr = all20.length > 0 ? all20[all20.length - 1] : null;
         if (!escrowAddr) throw new Error('Could not get ERC20 escrow address');
         // Approve IDRX to escrow then fund
         const idrxAbi = [
           { inputs: [{ internalType: 'address', name: 'spender', type: 'address' }, { internalType: 'uint256', name: 'value', type: 'uint256' }], name: 'approve', outputs: [{ internalType: 'bool', name: '', type: 'bool' }], stateMutability: 'nonpayable', type: 'function' },
-        ];
-        const idrx = new ethers.Contract(IDRX_ADDRESS, idrxAbi as any, signer);
+        ] as const;
+        const idrx = new ethers.Contract(IDRX_ADDRESS, idrxAbi as ethers.InterfaceAbi, signer);
         const approveTx = await idrx.approve(escrowAddr, amountWei);
         await approveTx.wait();
-        const escrow20 = new ethers.Contract(escrowAddr, ESCROW_ERC20_ABI as any, signer);
+        const escrow20 = new ethers.Contract(escrowAddr, ESCROW_ERC20_ABI as ethers.InterfaceAbi, signer);
         const fundTx = await escrow20.fund();
         const fundReceipt = await fundTx.wait();
-        setCreatedAddress(escrowAddr);
         notify('success', `IDRX deal created and funded. View: ${txUrl(fundReceipt.hash)}`);
         setSubmitting(false);
         router.push(`/escrow/${escrowAddr}`);
       } else {
-        const factory = new ethers.Contract(FACTORY_ADDRESS, ESCROW_FACTORY_ABI as any, signer);
+        const factory = new ethers.Contract(FACTORY_ADDRESS, ESCROW_FACTORY_ABI as ethers.InterfaceAbi, signer);
         const tx = await factory.createEscrow(payerAddr, payee, arbiter, amountWei);
-        const receipt = await tx.wait();
-        setCreateTxHash(receipt.hash);
+        const _receipt = await tx.wait();
         const addrs = await factory.allEscrows();
         const escrowAddress = addrs.length > 0 ? addrs[addrs.length - 1] : null;
         if (!escrowAddress) throw new Error('Could not get escrow address');
-        const escrow = new ethers.Contract(escrowAddress, ESCROW_ABI as any, signer);
+        const escrow = new ethers.Contract(escrowAddress, ESCROW_ABI as ethers.InterfaceAbi, signer);
         const fundTx = await escrow.fund({ value: amountWei });
         const fundReceipt = await fundTx.wait();
-        setCreatedAddress(escrowAddress);
         notify('success', `Deal created and funded. View: ${txUrl(fundReceipt.hash)}`);
         setSubmitting(false);
         router.push(`/escrow/${escrowAddress}`);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       setSubmitting(false);
       notify('error', humanError(err));
     }
@@ -286,7 +281,7 @@ export default function CreateDealPage() {
                 exit={{ opacity: 0, x: -8 }}
                 className="space-y-4"
               >
-                <div className="rounded-xl border border-slate-200 bg-lightbg p-6 space-y-3">
+                <div className="card-muted space-y-3">
                   <div>
                     <span className="text-sm text-slate-500">Payee</span>
                     <p className="font-mono text-sm text-text break-all">{form.payee.trim()}</p>
