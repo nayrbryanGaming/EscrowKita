@@ -2,8 +2,8 @@
   "_format": "hh-sol-cache-2",
   "files": {
     "E:\\000VSCODE PROJECT MULAI DARI DESEMBER 2025\\EscrowKita\\contracts\\contracts\\Escrow.sol": {
-      "lastModificationDate": 1768980391087,
-      "contentHash": "f33b735b5a4902f42fc531af28d19a07",
+      "lastModificationDate": 1769853891904,
+      "contentHash": "f6d4f62eab52f98a37948d8f8ac13c25",
       "sourceName": "contracts/Escrow.sol",
       "solcConfig": {
         "version": "0.8.18",
@@ -37,8 +37,8 @@
       ]
     },
     "E:\\000VSCODE PROJECT MULAI DARI DESEMBER 2025\\EscrowKita\\contracts\\contracts\\EscrowFactory.sol": {
-      "lastModificationDate": 1768980398426,
-      "contentHash": "b3d2d98bbb70e27d8a38c1c791e88d9b",
+      "lastModificationDate": 1769761173822,
+      "contentHash": "15e6303afdedc52db076d88ad0ef7228",
       "sourceName": "contracts/EscrowFactory.sol",
       "solcConfig": {
         "version": "0.8.18",
@@ -71,6 +71,375 @@
       ],
       "artifacts": [
         "EscrowFactory"
+      ]
+    },
+    "E:\\000VSCODE PROJECT MULAI DARI DESEMBER 2025\\EscrowKita\\contracts\\contracts\\EscrowERC20.sol": {
+      "lastModificationDate": 1769853905603,
+      "contentHash": "fa11b7b5e91d7de9dd47be18c9cfe988",
+      "sourceName": "contracts/EscrowERC20.sol",
+      "solcConfig": {
+        "version": "0.8.18",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "@openzeppelin/contracts/token/ERC20/IERC20.sol"
+      ],
+      "versionPragmas": [
+        "^0.8.18"
+      ],
+      "artifacts": [
+        "EscrowERC20"
+      ]
+    },
+    "E:\\000VSCODE PROJECT MULAI DARI DESEMBER 2025\\EscrowKita\\contracts\\node_modules\\@openzeppelin\\contracts\\token\\ERC20\\IERC20.sol": {
+      "lastModificationDate": 1769850194357,
+      "contentHash": "df36f7051335cd1e748b1b6463b7fdd3",
+      "sourceName": "@openzeppelin/contracts/token/ERC20/IERC20.sol",
+      "solcConfig": {
+        "version": "0.8.18",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.8.0"
+      ],
+      "artifacts": [
+        "IERC20"
+      ]
+    },
+    "E:\\000VSCODE PROJECT MULAI DARI DESEMBER 2025\\EscrowKita\\contracts\\contracts\\EscrowERC20Factory.sol": {
+      "lastModificationDate": 1769846266893,
+      "contentHash": "bb100654169ba049439f089eee49a3ac",
+      "sourceName": "contracts/EscrowERC20Factory.sol",
+      "solcConfig": {
+        "version": "0.8.18",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "./EscrowERC20.sol"
+      ],
+      "versionPragmas": [
+        "^0.8.18"
+      ],
+      "artifacts": [
+        "EscrowERC20Factory"
+      ]
+    },
+    "E:\\000VSCODE PROJECT MULAI DARI DESEMBER 2025\\EscrowKita\\contracts\\node_modules\\@openzeppelin\\contracts\\token\\ERC20\\extensions\\IERC20Metadata.sol": {
+      "lastModificationDate": 1769850194390,
+      "contentHash": "909ab67fc5c25033fe6cd364f8c056f9",
+      "sourceName": "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol",
+      "solcConfig": {
+        "version": "0.8.18",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "../IERC20.sol"
+      ],
+      "versionPragmas": [
+        "^0.8.0"
+      ],
+      "artifacts": [
+        "IERC20Metadata"
+      ]
+    },
+    "E:\\000VSCODE PROJECT MULAI DARI DESEMBER 2025\\EscrowKita\\contracts\\node_modules\\@openzeppelin\\contracts\\token\\ERC20\\ERC20.sol": {
+      "lastModificationDate": 1769850193417,
+      "contentHash": "3ae5166c6827a9cf1a7a462d1632b464",
+      "sourceName": "@openzeppelin/contracts/token/ERC20/ERC20.sol",
+      "solcConfig": {
+        "version": "0.8.18",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "./IERC20.sol",
+        "./extensions/IERC20Metadata.sol",
+        "../../utils/Context.sol"
+      ],
+      "versionPragmas": [
+        "^0.8.0"
+      ],
+      "artifacts": [
+        "ERC20"
+      ]
+    },
+    "E:\\000VSCODE PROJECT MULAI DARI DESEMBER 2025\\EscrowKita\\contracts\\node_modules\\@openzeppelin\\contracts\\utils\\Context.sol": {
+      "lastModificationDate": 1769850192609,
+      "contentHash": "f07feb4a44b1a4872370da5aa70e8e46",
+      "sourceName": "@openzeppelin/contracts/utils/Context.sol",
+      "solcConfig": {
+        "version": "0.8.18",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.8.0"
+      ],
+      "artifacts": [
+        "Context"
+      ]
+    },
+    "E:\\000VSCODE PROJECT MULAI DARI DESEMBER 2025\\EscrowKita\\contracts\\node_modules\\@openzeppelin\\contracts\\access\\Ownable.sol": {
+      "lastModificationDate": 1769850194639,
+      "contentHash": "5a20b2cad87ddb61c7a3a6af21289e28",
+      "sourceName": "@openzeppelin/contracts/access/Ownable.sol",
+      "solcConfig": {
+        "version": "0.8.18",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "../utils/Context.sol"
+      ],
+      "versionPragmas": [
+        "^0.8.0"
+      ],
+      "artifacts": [
+        "Ownable"
+      ]
+    },
+    "E:\\000VSCODE PROJECT MULAI DARI DESEMBER 2025\\EscrowKita\\contracts\\contracts\\MockIDRX.sol": {
+      "lastModificationDate": 1769850231421,
+      "contentHash": "f8e0589678fa0181063950dc57105274",
+      "sourceName": "contracts/MockIDRX.sol",
+      "solcConfig": {
+        "version": "0.8.18",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "@openzeppelin/contracts/token/ERC20/ERC20.sol",
+        "@openzeppelin/contracts/access/Ownable.sol"
+      ],
+      "versionPragmas": [
+        "^0.8.18"
+      ],
+      "artifacts": [
+        "MockIDRX"
+      ]
+    },
+    "E:\\000VSCODE PROJECT MULAI DARI DESEMBER 2025\\EscrowKita\\contracts\\contracts\\EscrowMilestoneERC20.sol": {
+      "lastModificationDate": 1769854208252,
+      "contentHash": "161a80e7e99d69f03961ddff7184b863",
+      "sourceName": "contracts/EscrowMilestoneERC20.sol",
+      "solcConfig": {
+        "version": "0.8.18",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "@openzeppelin/contracts/token/ERC20/IERC20.sol"
+      ],
+      "versionPragmas": [
+        "^0.8.18"
+      ],
+      "artifacts": [
+        "EscrowMilestoneERC20"
+      ]
+    },
+    "E:\\000VSCODE PROJECT MULAI DARI DESEMBER 2025\\EscrowKita\\contracts\\contracts\\EscrowMilestoneFactory.sol": {
+      "lastModificationDate": 1769854218885,
+      "contentHash": "6d11790ed2c95efdf893b7aa955cdeed",
+      "sourceName": "contracts/EscrowMilestoneFactory.sol",
+      "solcConfig": {
+        "version": "0.8.18",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "./EscrowMilestoneERC20.sol"
+      ],
+      "versionPragmas": [
+        "^0.8.18"
+      ],
+      "artifacts": [
+        "EscrowMilestoneFactory"
       ]
     }
   }

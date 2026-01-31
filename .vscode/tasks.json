@@ -1,0 +1,39 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Next.js Build and Deploy to Vercel",
+			"type": "shell",
+			"command": "npx next build; npx vercel --prod --yes",
+			"args": [],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "build"
+		},
+		{
+			"label": "Next.js Build and Deploy to Vercel",
+			"type": "shell",
+			"command": "npx next build; npx vercel --prod --yes",
+			"args": [],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "build"
+		},
+		{
+			"label": "Next.js Build",
+			"type": "shell",
+			"command": "npx next build",
+			"args": [],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "build"
+		},
+		{
+			"label": "Next.js Build and Deploy to Vercel (PS)",
+			"type": "shell",
+			"command": "npx next build; npx vercel --prod --yes",
+			"isBackground": false,
+			"group": "build"
+		}
+	]
+}

@@ -1,3 +1,4 @@
+# Deploy EscrowKita frontend to Vercel (Next.js at repo root)
 name: Deploy Frontend to Vercel
 
 on:
@@ -18,12 +19,15 @@ jobs:
           node-version: 18
 
       - name: Install dependencies
-        working-directory: ./frontend
         run: npm ci
 
-      - name: Build frontend
-        working-directory: ./frontend
+      - name: Build
         run: npm run build
+        env:
+          NEXT_PUBLIC_BASE_RPC: ${{ secrets.NEXT_PUBLIC_BASE_RPC }}
+          NEXT_PUBLIC_ALCHEMY_API_KEY: ${{ secrets.NEXT_PUBLIC_ALCHEMY_API_KEY }}
+          NEXT_PUBLIC_ESCROW_CONTRACT_ADDRESS: ${{ secrets.NEXT_PUBLIC_ESCROW_CONTRACT_ADDRESS }}
+          NEXT_PUBLIC_ESCROW_FACTORY_ADDRESS: ${{ secrets.NEXT_PUBLIC_ESCROW_FACTORY_ADDRESS }}
 
       - name: Deploy to Vercel
         uses: amondnet/vercel-action@v25
@@ -31,5 +35,5 @@ jobs:
           vercel-token: ${{ secrets.VERCEL_TOKEN }}
           vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
           vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          working-directory: ./frontend
+          working-directory: .
           prod: true

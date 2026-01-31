@@ -14,44 +14,206 @@ import * as Contracts from ".";
 declare module "hardhat/types/runtime" {
   interface HardhatEthersHelpers extends HardhatEthersHelpersBase {
     getContractFactory(
+      name: "Ownable",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.Ownable__factory>;
+    getContractFactory(
+      name: "ERC20",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.ERC20__factory>;
+    getContractFactory(
+      name: "IERC20Metadata",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.IERC20Metadata__factory>;
+    getContractFactory(
+      name: "IERC20",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.IERC20__factory>;
+    getContractFactory(
       name: "Escrow",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.Escrow__factory>;
     getContractFactory(
+      name: "EscrowERC20",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.EscrowERC20__factory>;
+    getContractFactory(
+      name: "EscrowERC20Factory",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.EscrowERC20Factory__factory>;
+    getContractFactory(
       name: "EscrowFactory",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.EscrowFactory__factory>;
+    getContractFactory(
+      name: "EscrowMilestoneERC20",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.EscrowMilestoneERC20__factory>;
+    getContractFactory(
+      name: "EscrowMilestoneFactory",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.EscrowMilestoneFactory__factory>;
+    getContractFactory(
+      name: "MockIDRX",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.MockIDRX__factory>;
 
+    getContractAt(
+      name: "Ownable",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.Ownable>;
+    getContractAt(
+      name: "ERC20",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.ERC20>;
+    getContractAt(
+      name: "IERC20Metadata",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.IERC20Metadata>;
+    getContractAt(
+      name: "IERC20",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.IERC20>;
     getContractAt(
       name: "Escrow",
       address: string | ethers.Addressable,
       signer?: ethers.Signer
     ): Promise<Contracts.Escrow>;
     getContractAt(
+      name: "EscrowERC20",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.EscrowERC20>;
+    getContractAt(
+      name: "EscrowERC20Factory",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.EscrowERC20Factory>;
+    getContractAt(
       name: "EscrowFactory",
       address: string | ethers.Addressable,
       signer?: ethers.Signer
     ): Promise<Contracts.EscrowFactory>;
+    getContractAt(
+      name: "EscrowMilestoneERC20",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.EscrowMilestoneERC20>;
+    getContractAt(
+      name: "EscrowMilestoneFactory",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.EscrowMilestoneFactory>;
+    getContractAt(
+      name: "MockIDRX",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.MockIDRX>;
 
+    deployContract(
+      name: "Ownable",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.Ownable>;
+    deployContract(
+      name: "ERC20",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.ERC20>;
+    deployContract(
+      name: "IERC20Metadata",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IERC20Metadata>;
+    deployContract(
+      name: "IERC20",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IERC20>;
     deployContract(
       name: "Escrow",
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.Escrow>;
     deployContract(
+      name: "EscrowERC20",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.EscrowERC20>;
+    deployContract(
+      name: "EscrowERC20Factory",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.EscrowERC20Factory>;
+    deployContract(
       name: "EscrowFactory",
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.EscrowFactory>;
+    deployContract(
+      name: "EscrowMilestoneERC20",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.EscrowMilestoneERC20>;
+    deployContract(
+      name: "EscrowMilestoneFactory",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.EscrowMilestoneFactory>;
+    deployContract(
+      name: "MockIDRX",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.MockIDRX>;
 
+    deployContract(
+      name: "Ownable",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.Ownable>;
+    deployContract(
+      name: "ERC20",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.ERC20>;
+    deployContract(
+      name: "IERC20Metadata",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IERC20Metadata>;
+    deployContract(
+      name: "IERC20",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IERC20>;
     deployContract(
       name: "Escrow",
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.Escrow>;
     deployContract(
+      name: "EscrowERC20",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.EscrowERC20>;
+    deployContract(
+      name: "EscrowERC20Factory",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.EscrowERC20Factory>;
+    deployContract(
       name: "EscrowFactory",
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.EscrowFactory>;
+    deployContract(
+      name: "EscrowMilestoneERC20",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.EscrowMilestoneERC20>;
+    deployContract(
+      name: "EscrowMilestoneFactory",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.EscrowMilestoneFactory>;
+    deployContract(
+      name: "MockIDRX",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.MockIDRX>;
 
     // default types
     getContractFactory(

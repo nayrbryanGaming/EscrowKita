@@ -21,11 +21,11 @@ import type {
   TypedLogDescription,
   TypedListener,
   TypedContractMethod,
-} from "./common";
+} from "../common";
 
-export interface EscrowFactoryInterface extends Interface {
+export interface EscrowERC20FactoryInterface extends Interface {
   getFunction(
-    nameOrSignature: "allEscrows" | "createEscrow" | "escrows"
+    nameOrSignature: "allEscrows" | "createEscrowERC20" | "escrows"
   ): FunctionFragment;
 
   getEvent(nameOrSignatureOrTopic: "EscrowCreated"): EventFragment;
@@ -35,8 +35,8 @@ export interface EscrowFactoryInterface extends Interface {
     values?: undefined
   ): string;
   encodeFunctionData(
-    functionFragment: "createEscrow",
-    values: [AddressLike, AddressLike, AddressLike, BigNumberish]
+    functionFragment: "createEscrowERC20",
+    values: [AddressLike, AddressLike, AddressLike, AddressLike, BigNumberish]
   ): string;
   encodeFunctionData(
     functionFragment: "escrows",
@@ -45,7 +45,7 @@ export interface EscrowFactoryInterface extends Interface {
 
   decodeFunctionResult(functionFragment: "allEscrows", data: BytesLike): Result;
   decodeFunctionResult(
-    functionFragment: "createEscrow",
+    functionFragment: "createEscrowERC20",
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "escrows", data: BytesLike): Result;
@@ -57,6 +57,7 @@ export namespace EscrowCreatedEvent {
     payer: AddressLike,
     payee: AddressLike,
     arbiter: AddressLike,
+    token: AddressLike,
     amount: BigNumberish
   ];
   export type OutputTuple = [
@@ -64,6 +65,7 @@ export namespace EscrowCreatedEvent {
     payer: string,
     payee: string,
     arbiter: string,
+    token: string,
     amount: bigint
   ];
   export interface OutputObject {
@@ -71,6 +73,7 @@ export namespace EscrowCreatedEvent {
     payer: string;
     payee: string;
     arbiter: string;
+    token: string;
     amount: bigint;
   }
   export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
@@ -79,11 +82,11 @@ export namespace EscrowCreatedEvent {
   export type LogDescription = TypedLogDescription<Event>;
 }
 
-export interface EscrowFactory extends BaseContract {
-  connect(runner?: ContractRunner | null): EscrowFactory;
+export interface EscrowERC20Factory extends BaseContract {
+  connect(runner?: ContractRunner | null): EscrowERC20Factory;
   waitForDeployment(): Promise<this>;
 
-  interface: EscrowFactoryInterface;
+  interface: EscrowERC20FactoryInterface;
 
   queryFilter<TCEvent extends TypedContractEvent>(
     event: TCEvent,
@@ -124,11 +127,12 @@ export interface EscrowFactory extends BaseContract {
 
   allEscrows: TypedContractMethod<[], [string[]], "view">;
 
-  createEscrow: TypedContractMethod<
+  createEscrowERC20: TypedContractMethod<
     [
       payer: AddressLike,
       payee: AddressLike,
       arbiter: AddressLike,
+      token: AddressLike,
       amount: BigNumberish
     ],
     [string],
@@ -145,12 +149,13 @@ export interface EscrowFactory extends BaseContract {
     nameOrSignature: "allEscrows"
   ): TypedContractMethod<[], [string[]], "view">;
   getFunction(
-    nameOrSignature: "createEscrow"
+    nameOrSignature: "createEscrowERC20"
   ): TypedContractMethod<
     [
       payer: AddressLike,
       payee: AddressLike,
       arbiter: AddressLike,
+      token: AddressLike,
       amount: BigNumberish
     ],
     [string],
@@ -169,7 +174,7 @@ export interface EscrowFactory extends BaseContract {
   >;
 
   filters: {
-    "EscrowCreated(address,address,address,address,uint256)": TypedContractEvent<
+    "EscrowCreated(address,address,address,address,address,uint256)": TypedContractEvent<
       EscrowCreatedEvent.InputTuple,
       EscrowCreatedEvent.OutputTuple,
       EscrowCreatedEvent.OutputObject

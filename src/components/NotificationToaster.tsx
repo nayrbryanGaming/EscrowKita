@@ -16,8 +16,8 @@ export default function NotificationToaster({ notifications }: { notifications: 
       {notifications.map((n, i) => (
         <div
           key={i}
-          className={`px-5 py-4 rounded-xl shadow-2xl text-base font-semibold animate-fade-in border-2 focus:outline-none focus:ring-2 focus:ring-accent-500 transition-all
-            ${n.type === "success" ? "bg-success-500/95 text-white border-success-500" : n.type === "error" ? "bg-danger-500/95 text-white border-danger-500" : "bg-brand-500/95 text-white border-brand-500"}
+          className={`px-5 py-4 rounded-xl shadow-lg text-base font-semibold animate-fade-in border-2 transition-all
+            ${n.type === "success" ? "bg-success text-white border-success" : n.type === "error" ? "bg-danger text-white border-danger" : "bg-primary text-white border-primary"}
           `}
           tabIndex={0}
           role="alert"

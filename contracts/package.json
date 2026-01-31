@@ -4,12 +4,17 @@
   "version": "0.0.0",
   "scripts": {
     "compile": "hardhat compile",
-    "deploy": "hardhat run --network baseSepolia scripts/deploy.ts"
+    "deploy": "hardhat run --network baseSepolia scripts/deploy.ts",
+    "deploy:erc20": "hardhat run --network baseSepolia scripts/deploy_erc20.ts"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^3.0.0",
     "hardhat": "^2.18.0",
     "ts-node": "^10.9.1",
     "typescript": "^5.0.4"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "4.9.6",
+    "dotenv": "^17.2.3"
   }
 }

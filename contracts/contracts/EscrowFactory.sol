@@ -9,10 +9,10 @@ contract EscrowFactory {
     address[] public escrows;
 
     function createEscrow(address payer, address payee, address arbiter, uint256 amount) external returns (address) {
-        Escrow e = new Escrow(payer, payee, arbiter, amount);
-        escrows.push(address(e));
-        emit EscrowCreated(address(e), payer, payee, arbiter, amount);
-        return address(e);
+        Escrow escrow = new Escrow(payer, payee, arbiter, amount);
+        escrows.push(address(escrow));
+        emit EscrowCreated(address(escrow), payer, payee, arbiter, amount);
+        return address(escrow);
     }
 
     function allEscrows() external view returns (address[] memory) {

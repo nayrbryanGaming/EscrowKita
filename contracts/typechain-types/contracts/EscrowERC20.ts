@@ -21,23 +21,25 @@ import type {
   TypedLogDescription,
   TypedListener,
   TypedContractMethod,
-} from "./common";
+} from "../common";
 
-export interface EscrowInterface extends Interface {
+export interface EscrowERC20Interface extends Interface {
   getFunction(
     nameOrSignature:
       | "amount"
-      | "approveAndRelease"
+      | "approve"
       | "arbiter"
-      | "claimTimeout"
       | "fund"
       | "fundedAt"
+      | "lastProof"
       | "payee"
       | "payer"
       | "refund"
       | "refunded"
       | "released"
       | "submitProof"
+      | "submitted"
+      | "token"
   ): FunctionFragment;
 
   getEvent(
@@ -47,40 +49,29 @@ export interface EscrowInterface extends Interface {
       | "ProofSubmitted"
       | "Refunded"
       | "Released"
-      | "TimeoutClaimed"
   ): EventFragment;
 
   encodeFunctionData(functionFragment: "amount", values?: undefined): string;
-  encodeFunctionData(
-    functionFragment: "approveAndRelease",
-    values?: undefined
-  ): string;
+  encodeFunctionData(functionFragment: "approve", values?: undefined): string;
   encodeFunctionData(functionFragment: "arbiter", values?: undefined): string;
-  encodeFunctionData(
-    functionFragment: "claimTimeout",
-    values: [BigNumberish]
-  ): string;
   encodeFunctionData(functionFragment: "fund", values?: undefined): string;
   encodeFunctionData(functionFragment: "fundedAt", values?: undefined): string;
+  encodeFunctionData(functionFragment: "lastProof", values?: undefined): string;
   encodeFunctionData(functionFragment: "payee", values?: undefined): string;
   encodeFunctionData(functionFragment: "payer", values?: undefined): string;
   encodeFunctionData(functionFragment: "refund", values?: undefined): string;
   encodeFunctionData(functionFragment: "refunded", values?: undefined): string;
   encodeFunctionData(functionFragment: "released", values?: undefined): string;
   encodeFunctionData(functionFragment: "submitProof", values: [string]): string;
+  encodeFunctionData(functionFragment: "submitted", values?: undefined): string;
+  encodeFunctionData(functionFragment: "token", values?: undefined): string;
 
   decodeFunctionResult(functionFragment: "amount", data: BytesLike): Result;
-  decodeFunctionResult(
-    functionFragment: "approveAndRelease",
-    data: BytesLike
-  ): Result;
+  decodeFunctionResult(functionFragment: "approve", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "arbiter", data: BytesLike): Result;
-  decodeFunctionResult(
-    functionFragment: "claimTimeout",
-    data: BytesLike
-  ): Result;
   decodeFunctionResult(functionFragment: "fund", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "fundedAt", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "lastProof", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "payee", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "payer", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "refund", data: BytesLike): Result;
@@ -90,6 +81,8 @@ export interface EscrowInterface extends Interface {
     functionFragment: "submitProof",
     data: BytesLike
   ): Result;
+  decodeFunctionResult(functionFragment: "submitted", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "token", data: BytesLike): Result;
 }
 
 export namespace ApprovedEvent {
@@ -156,23 +149,11 @@ export namespace ReleasedEvent {
   export type LogDescription = TypedLogDescription<Event>;
 }
 
-export namespace TimeoutClaimedEvent {
-  export type InputTuple = [by: AddressLike];
-  export type OutputTuple = [by: string];
-  export interface OutputObject {
-    by: string;
-  }
-  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
-  export type Filter = TypedDeferredTopicFilter<Event>;
-  export type Log = TypedEventLog<Event>;
-  export type LogDescription = TypedLogDescription<Event>;
-}
-
-export interface Escrow extends BaseContract {
-  connect(runner?: ContractRunner | null): Escrow;
+export interface EscrowERC20 extends BaseContract {
+  connect(runner?: ContractRunner | null): EscrowERC20;
   waitForDeployment(): Promise<this>;
 
-  interface: EscrowInterface;
+  interface: EscrowERC20Interface;
 
   queryFilter<TCEvent extends TypedContractEvent>(
     event: TCEvent,
@@ -213,19 +194,15 @@ export interface Escrow extends BaseContract {
 
   amount: TypedContractMethod<[], [bigint], "view">;
 
-  approveAndRelease: TypedContractMethod<[], [void], "nonpayable">;
+  approve: TypedContractMethod<[], [void], "nonpayable">;
 
   arbiter: TypedContractMethod<[], [string], "view">;
 
-  claimTimeout: TypedContractMethod<
-    [timeoutSeconds: BigNumberish],
-    [void],
-    "nonpayable"
-  >;
-
-  fund: TypedContractMethod<[], [void], "payable">;
+  fund: TypedContractMethod<[], [void], "nonpayable">;
 
   fundedAt: TypedContractMethod<[], [bigint], "view">;
+
+  lastProof: TypedContractMethod<[], [string], "view">;
 
   payee: TypedContractMethod<[], [string], "view">;
 
@@ -239,6 +216,10 @@ export interface Escrow extends BaseContract {
 
   submitProof: TypedContractMethod<[proof: string], [void], "nonpayable">;
 
+  submitted: TypedContractMethod<[], [boolean], "view">;
+
+  token: TypedContractMethod<[], [string], "view">;
+
   getFunction<T extends ContractMethod = ContractMethod>(
     key: string | FunctionFragment
   ): T;
@@ -247,20 +228,20 @@ export interface Escrow extends BaseContract {
     nameOrSignature: "amount"
   ): TypedContractMethod<[], [bigint], "view">;
   getFunction(
-    nameOrSignature: "approveAndRelease"
+    nameOrSignature: "approve"
   ): TypedContractMethod<[], [void], "nonpayable">;
   getFunction(
     nameOrSignature: "arbiter"
   ): TypedContractMethod<[], [string], "view">;
   getFunction(
-    nameOrSignature: "claimTimeout"
-  ): TypedContractMethod<[timeoutSeconds: BigNumberish], [void], "nonpayable">;
-  getFunction(
     nameOrSignature: "fund"
-  ): TypedContractMethod<[], [void], "payable">;
+  ): TypedContractMethod<[], [void], "nonpayable">;
   getFunction(
     nameOrSignature: "fundedAt"
   ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "lastProof"
+  ): TypedContractMethod<[], [string], "view">;
   getFunction(
     nameOrSignature: "payee"
   ): TypedContractMethod<[], [string], "view">;
@@ -279,6 +260,12 @@ export interface Escrow extends BaseContract {
   getFunction(
     nameOrSignature: "submitProof"
   ): TypedContractMethod<[proof: string], [void], "nonpayable">;
+  getFunction(
+    nameOrSignature: "submitted"
+  ): TypedContractMethod<[], [boolean], "view">;
+  getFunction(
+    nameOrSignature: "token"
+  ): TypedContractMethod<[], [string], "view">;
 
   getEvent(
     key: "Approved"
@@ -314,13 +301,6 @@ export interface Escrow extends BaseContract {
     ReleasedEvent.InputTuple,
     ReleasedEvent.OutputTuple,
     ReleasedEvent.OutputObject
-  >;
-  getEvent(
-    key: "TimeoutClaimed"
-  ): TypedContractEvent<
-    TimeoutClaimedEvent.InputTuple,
-    TimeoutClaimedEvent.OutputTuple,
-    TimeoutClaimedEvent.OutputObject
   >;
 
   filters: {
@@ -377,17 +357,6 @@ export interface Escrow extends BaseContract {
       ReleasedEvent.InputTuple,
       ReleasedEvent.OutputTuple,
       ReleasedEvent.OutputObject
-    >;
-
-    "TimeoutClaimed(address)": TypedContractEvent<
-      TimeoutClaimedEvent.InputTuple,
-      TimeoutClaimedEvent.OutputTuple,
-      TimeoutClaimedEvent.OutputObject
-    >;
-    TimeoutClaimed: TypedContractEvent<
-      TimeoutClaimedEvent.InputTuple,
-      TimeoutClaimedEvent.OutputTuple,
-      TimeoutClaimedEvent.OutputObject
     >;
   };
 }

@@ -1,5 +1,9 @@
 import { HardhatUserConfig } from "hardhat/types";
 import "@nomicfoundation/hardhat-toolbox";
+import dotenv from "dotenv";
+import path from "path";
+
+dotenv.config({ path: path.resolve(__dirname, "../.env") });
 
 const PRIVATE_KEY = process.env.DEPLOYER_PRIVATE_KEY || "";
 const BASE_RPC = process.env.BASE_SEPOLIA_RPC || "";
