@@ -1,0 +1,57 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* EscrowKita — Trust-centric institutional design system */
+@layer base {
+  :root {
+    --primary: #0052FF;
+    --darknavy: #0B1C2D;
+    --lightbg: #F8FAFC;
+    --success: #22C55E;
+    --warning: #F59E0B;
+    --danger: #EF4444;
+    --text: #0F172A;
+    --muted: #64748B;
+  }
+  body {
+    @apply bg-lightbg text-text antialiased;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center justify-center rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primaryHover focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none;
+  }
+  .btn-outline {
+    @apply inline-flex items-center justify-center rounded-lg border-2 border-primary bg-transparent px-5 py-2.5 text-sm font-semibold text-primary transition-colors hover:bg-primary/5 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50;
+  }
+  .btn-main {
+    @apply btn-primary;
+  }
+  .btn-outline-main {
+    @apply btn-outline;
+  }
+  .input-field {
+    @apply w-full rounded-lg border border-slate-200 bg-white px-4 py-2.5 font-sans text-text placeholder:text-slate-500 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary;
+  }
+  .font-mono-numeric {
+    font-family: var(--font-mono), ui-monospace, monospace;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  .skeleton {
+    @apply animate-pulse rounded bg-slate-200;
+  }
+}
+
+/* Numbers, addresses, timers — JetBrains Mono */
+.mono-numeric,
+[data-mono] {
+  font-family: var(--font-mono), 'JetBrains Mono', ui-monospace, monospace;
+}

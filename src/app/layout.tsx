@@ -1,48 +1,91 @@
+import React from 'react';
+import '../styles/globals.css';
+import Providers from './providers';
+import ConnectWallet from '../components/ConnectWallet';
+import type { Metadata } from 'next';
+import { Inter, JetBrains_Mono } from 'next/font/google';
 
+const inter = Inter({ subsets: ['latin'], display: 'swap', variable: '--font-inter' });
+const jetbrainsMono = JetBrains_Mono({ subsets: ['latin'], variable: '--font-mono' });
 
-import "./globals.css";
-import { ReactNode } from "react";
-import MultiWalletConnect from "../components/MultiWalletConnect";
-import ClientLayout from "./ClientLayout";
-import { Providers } from "./providers";
+export const metadata: Metadata = {
+  title: 'EscrowKita — Get Paid Safely. Without Trusting Anyone.',
+  description: 'Smart contract escrow in IDR. Funds are locked onchain and released only when the work is done. Non-custodial, open-source, verified on Base.',
+  keywords: ['escrow', 'Base', 'smart contract', 'IDR', 'freelancer', 'Indonesia', 'onchain'],
+  authors: [{ name: 'EscrowKita' }],
+  openGraph: {
+    title: 'EscrowKita — Get Paid Safely. Without Trusting Anyone.',
+    description: 'Smart contract escrow. Funds locked onchain, released when work is done.',
+    type: 'website',
+  },
+  metadataBase: process.env.NEXT_PUBLIC_APP_URL ? new URL(process.env.NEXT_PUBLIC_APP_URL) : undefined,
+};
 
-
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className="bg-gradient-to-br from-[#e3eafc] via-[#f8fafc] to-[#e0e7ef] min-h-screen font-sans antialiased text-gray-900">
+    <html lang="en" className={`scroll-smooth ${inter.variable} ${jetbrainsMono.variable}`}>
+      <body className={`${inter.className} antialiased bg-lightbg text-text`}>
         <Providers>
-          <div className="flex min-h-screen w-full">
-            {/* Sidebar Trustpay-SEA style */}
-            <aside className="hidden md:flex flex-col items-center w-64 bg-gradient-to-b from-blue-800 via-blue-700 to-blue-600 text-white shadow-2xl py-10 px-4 sticky top-0 h-screen z-30">
-              <a href="/" className="mb-10 flex items-center gap-3">
-                <img src="/escrowkita-logo.svg" alt="Logo" className="w-12 h-12 rounded-xl shadow-lg" />
-                <span className="font-bold text-2xl tracking-tight">EscrowKita</span>
+          <div className="flex min-h-screen">
+            <aside className="hidden lg:flex flex-col w-24 bg-white border-r border-slate-200 py-8 px-4 items-center gap-6 shrink-0">
+              <a href="/" className="mb-8 flex items-center justify-center">
+                <img src="/escrowkita-logo.svg" alt="EscrowKita" className="w-12 h-12 rounded-full" />
               </a>
-              <nav className="flex flex-col gap-4 w-full">
-                <a href="/" className="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-900/60 transition font-semibold">
-                  <svg width="24" height="24" fill="none" viewBox="0 0 24 24"><path d="M3 12L12 3l9 9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M9 21V9h6v12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                  Home
-                </a>
-                <a href="/create" className="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-900/60 transition font-semibold">
-                  <svg width="24" height="24" fill="none" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                  Create Escrow
-                </a>
-                <a href="/escrow" className="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-900/60 transition font-semibold">
-                  <svg width="24" height="24" fill="none" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2" stroke="currentColor" strokeWidth="2"/><path d="M16 3v4M8 3v4" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
-                  Escrows
-                </a>
+              <nav className="flex flex-col gap-4 text-sm font-semibold text-slate-600">
+                <a href="/" className="hover:text-primary transition">Home</a>
+                <a href="/how-it-works" className="hover:text-primary transition">How it works</a>
+                <a href="/create" className="hover:text-primary transition">Create deal</a>
+                <a href="/escrow" className="hover:text-primary transition">Deals</a>
               </nav>
-              <div className="flex-1" />
-              <a href="https://sepolia.basescan.org/" target="_blank" rel="noopener" className="mt-8 text-xs text-blue-200 font-mono hover:underline">BaseScan</a>
+              <div className="mt-auto pb-4">
+                <ConnectWallet />
+              </div>
             </aside>
-            {/* Main Content */}
-            <main className="flex-1 flex flex-col min-h-screen bg-[#f8fafc]">
-              <ClientLayout>{children}</ClientLayout>
-            </main>
+            <div className="flex-1 flex flex-col min-h-screen">
+              <header className="lg:hidden sticky top-0 z-30 w-full bg-white flex items-center justify-between px-6 py-4 border-b border-slate-200">
+                <a href="/" className="flex items-center gap-2">
+                  <img src="/escrowkita-logo.svg" alt="EscrowKita" className="w-10 h-10 rounded-full" />
+                  <span className="font-bold text-lg text-primary">EscrowKita</span>
+                </a>
+                <ConnectWallet />
+              </header>
+              <main className="flex-1 w-full max-w-5xl mx-auto px-4 sm:px-6 py-8 md:py-10">
+                {children}
+              </main>
+              <Footer />
+            </div>
           </div>
         </Providers>
       </body>
     </html>
+  );
+}
+
+function Footer() {
+  const contractAddr = process.env.NEXT_PUBLIC_ESCROW_CONTRACT_ADDRESS;
+  const baseScanContract = contractAddr
+    ? `https://sepolia.basescan.org/address/${contractAddr}`
+    : 'https://sepolia.basescan.org';
+  return (
+    <footer className="py-8 px-4 bg-white border-t border-slate-200 w-full">
+      <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-slate-600">
+        <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4">
+          <span className="font-semibold text-text">EscrowKita</span>
+          <span>Built for Base Indonesia Hackathon</span>
+        </div>
+        <div className="flex flex-wrap items-center justify-center gap-4">
+          <a href="/how-it-works" className="hover:text-primary transition">About EscrowKita</a>
+          <a href={baseScanContract} target="_blank" rel="noopener noreferrer" className="hover:text-primary transition">
+            Smart Contract Verified (BaseScan)
+          </a>
+          <a href="https://github.com/nayrbryanGaming/EscrowKita" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition">
+            GitHub Repository
+          </a>
+        </div>
+      </div>
+      <p className="text-center text-slate-500 text-xs mt-4">
+        Built for Base Indonesia Hackathon. © {new Date().getFullYear()} EscrowKita. Non-custodial · Open-source · On-chain escrow.
+      </p>
+    </footer>
   );
 }

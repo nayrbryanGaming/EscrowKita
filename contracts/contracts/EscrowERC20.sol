@@ -1,10 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.18;
 
-contract Escrow {
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
+contract EscrowERC20 {
     address public payer;
     address public payee;
     address public arbiter;
+    IERC20 public token;
     uint256 public amount;
     uint256 public fundedAt;
     bool public released;
@@ -17,35 +20,24 @@ contract Escrow {
     event Approved(address indexed by);
     event Released(address indexed to, uint256 amount);
     event Refunded(address indexed to, uint256 amount);
-    event TimeoutClaimed(address indexed by);
 
-    constructor(address _payer, address _payee, address _arbiter, uint256 _amount) payable {
+    constructor(address _payer, address _payee, address _arbiter, address _token, uint256 _amount) {
         payer = _payer;
         payee = _payee;
         arbiter = _arbiter;
+        token = IERC20(_token);
         amount = _amount;
     }
 
-    modifier onlyPayer() {
-        require(msg.sender == payer, "only payer");
-        _;
-    }
+    modifier onlyPayer() { require(msg.sender == payer, "only payer"); _; }
+    modifier onlyArbiter() { require(msg.sender == arbiter, "only arbiter"); _; }
+    modifier onlyPayerOrArbiter() { require(msg.sender == payer || msg.sender == arbiter, "only payer or arbiter"); _; }
 
-    modifier onlyArbiter() {
-        require(msg.sender == arbiter, "only arbiter");
-        _;
-    }
-
-    modifier onlyPayerOrArbiter() {
-        require(msg.sender == payer || msg.sender == arbiter, "only payer or arbiter");
-        _;
-    }
-
-    function fund() external payable onlyPayer {
-        require(msg.value == amount, "incorrect amount");
+    function fund() external onlyPayer {
         require(fundedAt == 0, "already funded");
+        require(token.transferFrom(msg.sender, address(this), amount), "transfer failed");
         fundedAt = block.timestamp;
-        emit Funded(msg.sender, msg.value);
+        emit Funded(msg.sender, amount);
     }
 
     function submitProof(string calldata proof) external {
@@ -59,23 +51,14 @@ contract Escrow {
         require(!released, "already released");
         released = true;
         emit Approved(msg.sender);
-        payable(payee).transfer(amount);
+        require(token.transfer(payee, amount), "transfer failed");
         emit Released(payee, amount);
     }
 
     function refund() external onlyPayerOrArbiter {
         require(!refunded, "already refunded");
         refunded = true;
-        payable(payer).transfer(amount);
+        require(token.transfer(payer, amount), "transfer failed");
         emit Refunded(payer, amount);
-    }
-
-    function claimTimeout() external onlyPayer {
-        require(block.timestamp > fundedAt + 30 days, "timeout not reached");
-        require(!released, "already released");
-        require(!refunded, "already refunded");
-        refunded = true;
-        payable(payer).transfer(amount);
-        emit TimeoutClaimed(msg.sender);
     }
 }

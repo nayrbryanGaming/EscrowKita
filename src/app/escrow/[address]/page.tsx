@@ -1,480 +1,382 @@
-"use client";
-export const dynamic = "force-dynamic";
-import { useParams } from "next/navigation";
-import { useContractRead, useAccount, useContractWrite } from "wagmi";
-import { Address } from "wagmi";
-import escrowABIJson from "../../../contracts/escrowABI.json";
-import { useState, useMemo, useEffect } from "react";
-import { useNotification } from '@/app/providers';
-import { useEscrowEvents } from '@/lib/useEscrowEvents';
-import type { EscrowEvent } from '@/lib/useEscrowEvents';
-import ProofUpload from "@/components/ProofUpload";
-import { EnsOrAddress } from "@/components/EnsOrAddress";
-import { TxStepper, TxStepperState } from "@/components/TxStepper";
-import MilestoneComments from "@/components/MilestoneComments";
+'use client';
 
-const STATUS_LABELS = [
-  "Created", "Funded", "Submitted", "Released", "Refunded", "Claimed"
-];
+import React, { useState } from 'react';
+import Link from 'next/link';
+import { useParams, useRouter } from 'next/navigation';
+import { motion } from 'framer-motion';
+import { ethers } from 'ethers';
+import { useWallet } from '../../providers';
+import { useEscrow, type EscrowStatus } from '../../../hooks/useEscrow';
+import { useNotification } from '../../providers';
+import { ESCROW_ABI, ESCROW_ERC20_ABI, ESCROW_MILESTONE_ABI, addressUrl, txUrl, ESCROW_TIMEOUT_SECONDS } from '../../../lib/constants';
+import { getBrowserProvider } from '../../../lib/web3';
 
-// Strongly typed event feed item
-type EventFeedItem = {
-  name: string;
-  args: Record<string, unknown> | null;
-  txHash?: string;
-  blockNumber?: number;
+const STATUS_LABELS: Record<EscrowStatus, string> = {
+  idle: 'Loading…',
+  loading: 'Loading…',
+  created: 'Waiting for deposit',
+  funded: 'Funds Locked',
+  submitted: 'Proof Submitted',
+  released: 'Released',
+  refunded: 'Refunded',
+  error: 'Error',
 };
 
-
-// Milestone event structure
-type MilestoneEvent = {
-  index: number;
-  proof?: string;
-  approved?: boolean;
-  released?: boolean;
-  eventName?: string; // Added for event tracking
-};
-
-// ProofInput component
-interface ProofInputProps {
-  proofUrl: string;
-  setProofUrl: (v: string) => void;
-  submittingProof: boolean;
-  handleSubmitProof: () => void;
+function formatAmount(wei?: string): string {
+  if (!wei) return '—';
+  try {
+    return ethers.formatEther(wei);
+  } catch {
+    return wei;
+  }
 }
-const ProofInput: React.FC<ProofInputProps> = ({ proofUrl, setProofUrl, submittingProof, handleSubmitProof }) => (
-  <div className="flex flex-col gap-2">
-    <div className="flex gap-2 items-end">
-      <input
-        className="input input-bordered flex-1 focus:ring-2 focus:ring-accent-500 transition"
-        placeholder="Proof URL"
-        value={proofUrl}
-        onChange={e => setProofUrl(e.target.value)}
-        disabled={submittingProof}
-        aria-label="Proof URL input"
-      />
-      <button
-        className="btn btn-primary shadow-lg px-6 py-2 text-base font-bold rounded-lg transition-all hover:scale-105 focus:ring-2 focus:ring-accent-500"
-        disabled={submittingProof || !proofUrl}
-        onClick={handleSubmitProof}
-        aria-label="Submit Proof"
-      >
-        {submittingProof ? <span className="animate-pulse">Submitting...</span> : "Submit Proof"}
-      </button>
-    </div>
-    <ProofUpload onUpload={setProofUrl} />
-  </div>
-);
 
-// MilestoneTimeline component
-const MilestoneTimeline: React.FC<{ milestones: MilestoneEvent[] }> = ({ milestones }) => (
-  <ol className="flex flex-col md:flex-row gap-4 md:gap-0 md:items-center justify-between w-full mb-4">
-    {milestones.map((m, i) => (
-      <li key={i} className="flex flex-col items-center flex-1">
-        <div className={`w-8 h-8 rounded-full flex items-center justify-center mb-1 ${m.released ? 'bg-green-600 text-white' : m.approved ? 'bg-blue-600 text-white' : m.proof ? 'bg-yellow-400 text-white' : 'bg-slate-200 text-slate-400'}`}>{i + 1}</div>
-        <span className={`text-xs font-semibold ${m.released ? 'text-green-700' : m.approved ? 'text-blue-700' : m.proof ? 'text-yellow-700' : 'text-slate-400'}`}>Milestone {i + 1}</span>
-        {m.proof && (
-          <a href={m.proof} className="text-xs text-blue-600 underline mt-1" target="_blank" rel="noopener noreferrer">View Proof</a>
-        )}
-        {m.approved && <span className="text-xs text-blue-600 mt-1">Approved</span>}
-        {m.released && <span className="text-xs text-green-600 mt-1">Released</span>}
-        <MilestoneComments milestoneIndex={i} />
-        {i < milestones.length - 1 && <div className="w-1 h-6 md:w-12 md:h-1 bg-slate-200 mx-auto md:mx-0 md:my-0 my-2" />}
-      </li>
-    ))}
-  </ol>
-);
-
-// TxHistory is declared later in the file (single definition kept)
-
-// Status timeline visual (moved outside component)
-interface StatusTimelineProps { statusNum: number | undefined }
-const StatusTimeline: React.FC<StatusTimelineProps> = ({ statusNum }) => {
-  const sn = typeof statusNum === "number" ? statusNum : -1;
-  const steps = [
-    { label: "Created", color: "bg-gray-300", active: sn >= 0 },
-    { label: "Funded", color: "bg-blue-400", active: sn >= 1 },
-    { label: "Submitted", color: "bg-yellow-400", active: sn >= 2 },
-    { label: "Released", color: "bg-green-500", active: sn === 3 },
-    { label: "Refunded", color: "bg-red-400", active: sn === 4 },
-    { label: "Claimed", color: "bg-green-700", active: sn === 5 },
-  ];
-  // Only one of Released/Refunded/Claimed is active at a time
-  const finalIdx = sn >= 3 ? sn : null;
+function Countdown({ fundedAt }: { fundedAt: number }) {
+  const [now, setNow] = useState(Date.now());
+  React.useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+  const end = fundedAt * 1000 + ESCROW_TIMEOUT_SECONDS * 1000;
+  const left = Math.max(0, Math.floor((end - now) / 1000));
+  const d = Math.floor(left / 86400);
+  const h = Math.floor((left % 86400) / 3600);
+  const m = Math.floor((left % 3600) / 60);
+  const s = left % 60;
+  if (left <= 0) return <span className="font-mono text-warning">Timeout reached — can claim refund</span>;
   return (
-    <ol className="flex items-center justify-between w-full mb-8 gap-2">
-      {steps.map((step, i) => (
-        <li key={i} className="flex-1 flex flex-col items-center relative">
-          <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-white shadow-lg border-2 transition-all duration-300
-            ${i === finalIdx ? step.color + " border-black scale-110 animate-pulse" : step.active ? step.color + " border-white" : "bg-slate-200 border-slate-300 text-slate-400"}`}>{i + 1}</div>
-          <span className={`text-xs mt-1 font-semibold ${i === finalIdx ? "text-black" : step.active ? "text-gray-800 dark:text-gray-200" : "text-slate-400"}`}>{step.label}</span>
-          {i < steps.length - 1 && <div className={`absolute top-4 left-1/2 w-full h-1 -z-10 ${step.active ? "bg-blue-200" : "bg-slate-200"}`}></div>}
-        </li>
-      ))}
-    </ol>
+    <span className="font-mono text-text">
+      {d}d {h}h {m}m {s}s
+    </span>
   );
 }
 
 export default function EscrowDetailPage() {
-  const { address } = useParams();
-  // ...existing code...
-  const [error, setError] = useState("");
+  const { address } = useParams<{ address: string }>();
+  const router = useRouter();
+  const wallet = useWallet();
   const { notify } = useNotification();
-  const [proofUrl, setProofUrl] = useState<string>("");
-  // Transaction stepper state
-  const [txState, setTxState] = useState<TxStepperState>("idle");
-  // Removed txHash state, not used
-  const { address: user } = useAccount();
+  const state = useEscrow(address);
+  const [loadingAction, setLoadingAction] = useState<string | null>(null);
 
-  // Extract Escrow ABI array from JSON (assume correct key is 'Escrow')
-  const escrowABI = (escrowABIJson as any).Escrow || (escrowABIJson as any).default || escrowABIJson;
-  // Real-time contract state
-  const { data: status } = useContractRead({ address: address as `0x${string}`, abi: escrowABI, functionName: "getStatus" });
-  const { data: proof } = useContractRead({ address: address as `0x${string}`, abi: escrowABI, functionName: "getProof" });
-  const { data: payer } = useContractRead({ address: address as `0x${string}`, abi: escrowABI, functionName: "payer" });
-  const { data: payee } = useContractRead({ address: address as `0x${string}`, abi: escrowABI, functionName: "payee" });
-  const { data: amount } = useContractRead({ address: address as `0x${string}`, abi: escrowABI, functionName: "amount" });
-  const { data: timeout } = useContractRead({ address: address as `0x${string}`, abi: escrowABI, functionName: "timeout" });
-  const { data: milestoneCountRaw } = useContractRead({ address: address as `0x${string}`, abi: escrowABI, functionName: "milestoneCount" });
-  const milestoneCount = Number(milestoneCountRaw) || 1;
-  // Milestone event audit: event-driven state
+  const isPayer = wallet?.address && state.payer?.toLowerCase() === wallet.address.toLowerCase();
+  const isPayee = wallet?.address && state.payee?.toLowerCase() === wallet.address.toLowerCase();
+  const isArbiter = wallet?.address && state.arbiter?.toLowerCase() === wallet.address.toLowerCase();
+  const canApproveOrRefund = isArbiter || isPayer;
 
-  type MilestoneEventState = { eventName: string; index?: number; data?: string };
-  const [milestoneEvents, setMilestoneEvents] = useState<MilestoneEventState[]>([]);
-  // Global decoded events feed (new) - most recent first
-  const [eventsFeed, setEventsFeed] = useState<EventFeedItem[]>([]);
+  async function getSigner() {
+    const browser = getBrowserProvider();
+    if (!browser) throw new Error('Please connect your wallet.');
+    const signer = await browser.getSigner();
+    if (!signer) throw new Error('Please connect your wallet.');
+    return signer;
+  }
 
-  // subscribe to contract events (hook notifies and calls onEvent)
-  useEscrowEvents(address as string, escrowABI, (ev: EscrowEvent) => {
+  async function doFund() {
+    if (!state.amount) return;
     try {
-      let args: Record<string, unknown> | null = null;
-      if (ev.decoded && typeof ev.decoded === 'object' && 'args' in ev.decoded && typeof (ev.decoded as any).args === 'object') {
-        args = (ev.decoded as any).args;
-      } else if (ev.decoded && typeof ev.decoded === 'object') {
-        args = ev.decoded as Record<string, unknown>;
+      setLoadingAction('fund');
+      const signer = await getSigner();
+      if (state.isErc20 && !state.tokenAddress) {
+        const contract20 = new ethers.Contract(address as string, ESCROW_ERC20_ABI as any, signer);
+        const tx = await contract20.fund();
+        const receipt = await tx.wait();
+        notify('success', `Funded. View: ${txUrl(receipt.hash)}`);
+        window.open(txUrl(receipt.hash), '_blank');
+      } else if (state.isErc20 && state.tokenAddress) {
+        const contractM = new ethers.Contract(address as string, ESCROW_MILESTONE_ABI as any, signer);
+        const tx = await contractM.fundMilestone(1);
+        const receipt = await tx.wait();
+        notify('success', `Milestone 2 funded. View: ${txUrl(receipt.hash)}`);
+        window.open(txUrl(receipt.hash), '_blank');
+      } else {
+        const contract = new ethers.Contract(address as string, ESCROW_ABI as any, signer);
+        const tx = await contract.fund({ value: state.amount });
+        const receipt = await tx.wait();
+        notify('success', `Funded. View: ${txUrl(receipt.hash)}`);
+        window.open(txUrl(receipt.hash), '_blank');
       }
-      const compact: EventFeedItem = {
-        name: ev.name,
-        args,
-        txHash: ev.log?.transactionHash,
-        blockNumber: ev.log?.blockNumber ? Number(ev.log.blockNumber) : undefined,
-      };
-      setEventsFeed(prev => [compact, ...prev].slice(0, 200));
-      // mirror specific milestone events for timeline
-      if (compact.name === 'ProofSubmitted' && compact.args && typeof (compact.args as any).index !== 'undefined') {
-        setMilestoneEvents(prev => ([...prev, { eventName: 'ProofSubmitted', index: Number((compact.args as any).index ?? 0), data: (compact.args as any).proof }]));
-      }
-      if (compact.name === 'Released') setMilestoneEvents(prev => ([...prev, { eventName: 'Released', index: Number((compact.args as any)?.index ?? 0) }]));
-      if (compact.name === 'Approved') setMilestoneEvents(prev => ([...prev, { eventName: 'Approved', index: Number((compact.args as any)?.index ?? 0) }]));
-    } catch (e) {
-      // swallow
+    } catch (e: any) {
+      notify('error', e?.message || 'Transaction failed.');
+    } finally {
+      setLoadingAction(null);
     }
-  });
-  const milestones: MilestoneEvent[] = useMemo(() => {
-    if (!milestoneCount) return [];
-    const arr: MilestoneEvent[] = Array.from({ length: milestoneCount }, (_, i) => ({ index: i }));
-    milestoneEvents.forEach(ev => {
-      if (ev.eventName === 'ProofSubmitted' && arr[ev.index ?? 0]) arr[ev.index ?? 0].proof = ev.data || undefined;
-      if (ev.eventName === 'Released' && arr[ev.index ?? 0]) arr[ev.index ?? 0].released = true;
-      if (ev.eventName === 'Approved' && arr[ev.index ?? 0]) arr[ev.index ?? 0].approved = true;
-    });
-    arr.forEach(m => { if (m.released) m.approved = true; });
-    return arr;
-  }, [milestoneCount, milestoneEvents]);
+  }
 
-
-
-// ...existing code...
-
-  // Write contract hooks
-  // @ts-expect-error wagmi v1 type issue, runtime is correct
-  const depositWrite = useContractWrite({ address: address as unknown as Address, abi: escrowABI, functionName: "deposit" });
-  // @ts-expect-error wagmi v1 type issue, runtime is correct
-  const submitProofWrite = useContractWrite({ address: address as unknown as Address, abi: escrowABI, functionName: "submitProof" });
-  // @ts-expect-error wagmi v1 type issue, runtime is correct
-  const approveWrite = useContractWrite({ address: address as unknown as Address, abi: escrowABI, functionName: "approve" });
-  // @ts-expect-error wagmi v1 type issue, runtime is correct
-  const refundWrite = useContractWrite({ address: address as unknown as Address, abi: escrowABI, functionName: "refund" });
-  // @ts-expect-error wagmi v1 type issue, runtime is correct
-  const claimWrite = useContractWrite({ address: address as unknown as Address, abi: escrowABI, functionName: "claim" });
-
-  // Role detection
-  const payerAddr = typeof payer === 'string' ? payer : undefined;
-  const payeeAddr = typeof payee === 'string' ? payee : undefined;
-  const isPayer = user && payerAddr && user.toLowerCase() === payerAddr.toLowerCase();
-  const isPayee = user && payeeAddr && user.toLowerCase() === payeeAddr.toLowerCase();
-
-  // Action handlers (all defined at the top for scope)
-  const handleDeposit = async () => {
-    setError("");
-    setTxState("wallet");
+  async function doSubmitProof(proof: string) {
     try {
-      await (depositWrite as any).writeContract({
-        address: address as `0x${string}`,
-        abi: escrowABI,
-        functionName: "deposit"
-      });
-      setTxState("pending");
-      setTimeout(() => setTxState("confirmed"), 2000);
-      notify("success", "Deposit successful!");
-    } catch (e) {
-      setError((e as Error).message);
-      setTxState("failed");
-      notify("error", (e as Error).message || "Deposit failed");
+      setLoadingAction('proof');
+      const signer = await getSigner();
+      const isMilestone = state.isErc20 && state.tokenAddress;
+      const contract = new ethers.Contract(address as string, isMilestone ? ESCROW_MILESTONE_ABI as any : ESCROW_ABI as any, signer);
+      const tx = isMilestone ? await contract.submitProofForMilestone(0, proof) : await contract.submitProof(proof);
+      const receipt = await tx.wait();
+      notify('success', `Proof submitted. View: ${txUrl(receipt.hash)}`);
+      window.open(txUrl(receipt.hash), '_blank');
+    } catch (e: any) {
+      notify('error', e?.message || 'Transaction failed.');
+    } finally {
+      setLoadingAction(null);
     }
-  };
-  const handleApprove = async () => {
-    setError("");
-    setTxState("wallet");
+  }
+
+  async function doApprove() {
     try {
-      await (approveWrite as any).writeContract({
-        address: address as `0x${string}`,
-        abi: escrowABI,
-        functionName: "approve"
-      });
-      setTxState("pending");
-      setTimeout(() => setTxState("confirmed"), 2000);
-      notify("success", "Escrow approved & released!");
-    } catch (e) {
-      setError((e as Error).message);
-      setTxState("failed");
-      notify("error", (e as Error).message || "Approve failed");
+      setLoadingAction('approve');
+      const signer = await getSigner();
+      const isMilestone = state.isErc20 && state.tokenAddress;
+      const contract = new ethers.Contract(address as string, isMilestone ? ESCROW_MILESTONE_ABI as any : ESCROW_ABI as any, signer);
+      const tx = isMilestone ? await contract.approveMilestone(0) : await contract.approve();
+      const receipt = await tx.wait();
+      notify('success', `Released to payee. View: ${txUrl(receipt.hash)}`);
+      window.open(txUrl(receipt.hash), '_blank');
+    } catch (e: any) {
+      notify('error', e?.message || 'Transaction failed.');
+    } finally {
+      setLoadingAction(null);
     }
-  };
-  const handleRefund = async () => {
-    setError("");
-    setTxState("wallet");
+  }
+
+  async function doRefund() {
     try {
-      await (refundWrite as any).writeContract({
-        address: address as `0x${string}`,
-        abi: escrowABI,
-        functionName: "refund"
-      });
-      setTxState("pending");
-      setTimeout(() => setTxState("confirmed"), 2000);
-      notify("success", "Refund successful!");
-    } catch (e) {
-      setError((e as Error).message);
-      setTxState("failed");
-      notify("error", (e as Error).message || "Refund failed");
+      setLoadingAction('refund');
+      const signer = await getSigner();
+      const isMilestone = state.isErc20 && state.tokenAddress;
+      const contract = new ethers.Contract(address as string, isMilestone ? ESCROW_MILESTONE_ABI as any : ESCROW_ABI as any, signer);
+      const tx = isMilestone ? await contract.refundMilestone(0) : await contract.refund();
+      const receipt = await tx.wait();
+      notify('success', `Refunded to payer. View: ${txUrl(receipt.hash)}`);
+      window.open(txUrl(receipt.hash), '_blank');
+    } catch (e: any) {
+      notify('error', e?.message || 'Transaction failed.');
+    } finally {
+      setLoadingAction(null);
     }
-  };
-  const handleClaim = async () => {
-    setError("");
-    setTxState("wallet");
+  }
+
+  async function doClaimTimeout() {
     try {
-      await (claimWrite as any).writeContract({
-        address: address as `0x${string}`,
-        abi: escrowABI,
-        functionName: "claim"
-      });
-      setTxState("pending");
-      setTimeout(() => setTxState("confirmed"), 2000);
-      notify("success", "Claim successful!");
-    } catch (e) {
-      setError((e as Error).message);
-      setTxState("failed");
-      notify("error", (e as Error).message || "Claim failed");
+      setLoadingAction('claim');
+      const signer = await getSigner();
+      const contract = new ethers.Contract(address as string, ESCROW_ABI as any, signer);
+      const tx = await contract.claimTimeout(ESCROW_TIMEOUT_SECONDS);
+      const receipt = await tx.wait();
+      notify('success', `Timeout claimed. View: ${txUrl(receipt.hash)}`);
+      window.open(txUrl(receipt.hash), '_blank');
+    } catch (e: any) {
+      notify('error', e?.message || 'Transaction failed.');
+    } finally {
+      setLoadingAction(null);
     }
-  };
-  const handleSubmitProof = async () => {
-    setError("");
-    setTxState("wallet");
-    try {
-      await (submitProofWrite as any).writeContract({
-        address: address as `0x${string}`,
-        abi: escrowABI,
-        functionName: "submitProof",
-        args: [proofUrl]
-      });
-      setTxState("pending");
-      setTimeout(() => setTxState("confirmed"), 2000);
-      notify("success", "Proof submitted!");
-    } catch (e) {
-      setError((e as Error).message);
-      setTxState("failed");
-      notify("error", (e as Error).message || "Submit proof failed");
-    }
-  };
-  // Timeout logic (fix impure Date.now usage)
-  const [now, setNow] = useState(() => Math.floor(Date.now() / 1000));
-  useEffect(() => {
-    const interval = setInterval(() => setNow(Math.floor(Date.now() / 1000)), 10000);
-    return () => clearInterval(interval);
-  }, []);
-  const statusNum = typeof status === "number"
-    ? status
-    : Array.isArray(status) && typeof status[0] === "number"
-    ? status[0]
-    : undefined;
-  const canRefund = (statusNum === 1 || statusNum === 2) && timeout && now > Number(timeout);
-  // Action UI variables for type-safe rendering
-  let proofInput: React.ReactNode = null;
-  let approveButton: React.ReactNode = null;
-  let refundButton: React.ReactNode = null;
-  let claimButton: React.ReactNode = null;
-  if (typeof statusNum === "number" && Boolean(isPayee) && statusNum === 1) {
-    proofInput = (
-      <ProofInput
-        proofUrl={proofUrl}
-        setProofUrl={setProofUrl}
-        submittingProof={txState === "pending" || txState === "wallet"}
-        handleSubmitProof={handleSubmitProof}
-      />
+  }
+
+  const busy = loadingAction !== null;
+
+  if (!address) {
+    return (
+      <div className="min-h-full flex items-center justify-center">
+        <p className="text-slate-600">Invalid address.</p>
+        <Link href="/escrow" className="text-primary ml-2 hover:underline">Back to deals</Link>
+      </div>
     );
   }
-  if (typeof statusNum === "number" && isPayer && statusNum === 2) {
-    approveButton = (
-      <button
-        className="btn btn-primary w-full"
-        onClick={handleApprove}
-      >
-        Approve & Release
-      </button>
+
+  if (state.status === 'loading' || state.status === 'idle') {
+    return (
+      <div className="min-h-full flex flex-col items-center justify-center gap-4">
+        <div className="w-10 h-10 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+        <p className="text-slate-600">Loading deal from chain…</p>
+      </div>
     );
   }
-  if (isPayer && canRefund) {
-    refundButton = (
-      <button
-        className="btn btn-warning w-full"
-        onClick={handleRefund}
-      >
-        Refund to Payer
-      </button>
+
+  if (state.status === 'error') {
+    return (
+      <div className="min-h-full flex flex-col items-center justify-center gap-4">
+        <p className="text-danger font-medium">Could not load this deal.</p>
+        <p className="text-sm text-slate-600 max-w-md text-center">{state.error}</p>
+        <Link href="/escrow" className="btn-outline mt-2">Back to deals</Link>
+      </div>
     );
   }
-  if (typeof statusNum === "number" && isPayee && statusNum === 3) {
-    claimButton = (
-      <button
-        className="btn btn-success w-full"
-        onClick={handleClaim}
-      >
-        Claim Funds
-      </button>
-    );
-  }
+
+  const statusLabel = STATUS_LABELS[state.status];
+  const showCountdown = state.fundedAt && state.status === 'funded' && !state.released && !state.refunded;
 
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center px-2 py-8 bg-gradient-to-br from-[#f8fafc] via-[#e0f7fa] to-[#e0e7ef] dark:from-[#0A2540] dark:via-[#1e293b] dark:to-[#0b1530] animate-fade-in-up" role="main">
-      <section className="w-full max-w-3xl card rounded-3xl shadow-2xl p-10 md:p-16 flex flex-col items-center gap-10 border border-blue-100 dark:border-blue-900">
-        <div className="w-full flex flex-col md:flex-row items-center justify-between mb-2">
-          <h1 id="escrow-detail-title" className="text-5xl md:text-6xl font-extrabold logo tracking-tight flex items-center gap-4 drop-shadow-2xl text-blue-700 dark:text-blue-400 animate-fade-in-up">
-            Escrow Detail
-          </h1>
-          <span className="badge-proof mt-2 cursor-pointer animate-fade-in-up" title="Lihat bukti escrow di BaseScan">
-            <svg width="18" height="18" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#06B6D4"/><path d="M8 12.5l2.5 2.5L16 9" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-            {typeof address === "string" ? <a href={`https://sepolia.basescan.org/address/${address}`} target="_blank" rel="noopener" className="underline">BaseScan Proof</a> : "BaseScan Proof"}
-          </span>
+    <div className="min-h-full">
+      <div className="max-w-2xl mx-auto space-y-8">
+        <div className="flex items-center gap-4">
+          <button
+            type="button"
+            onClick={() => router.push('/escrow')}
+            className="p-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50"
+          >
+            ← Back
+          </button>
+          <h1 className="text-2xl font-bold text-darknavy">Deal</h1>
         </div>
-        {typeof statusNum === "number" && (
-          <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-bold shadow-lg mb-2 ${statusNum === 3 ? 'bg-green-100 text-green-800' : statusNum === 4 ? 'bg-red-100 text-red-800' : statusNum === 5 ? 'bg-green-200 text-green-900' : 'bg-blue-100 text-blue-800 animate-bounce-in'}`}>
-            {STATUS_LABELS[statusNum]}
-          </span>
-        )}
-        {/* Status Timeline */}
-        <div className="w-full animate-fade-in">
-          <StatusTimeline statusNum={statusNum} />
-        </div>
-        <div className="mb-8 w-full animate-fade-in">
-          <MilestoneTimeline milestones={milestones} />
-        </div>
-        <div className="mb-4 flex flex-col gap-4 mt-6 w-full animate-fade-in card rounded-3xl p-10 shadow-2xl border border-blue-100 dark:border-blue-900 bg-white/90 dark:bg-gray-900/90">
-          <div className="flex items-center gap-2"><span className="font-semibold text-blue-700 dark:text-blue-400">Escrow Address:</span>{typeof address === "string" ? <EnsOrAddress address={address} /> : <span>-</span>}</div>
-          <div className="flex items-center gap-2"><span className="font-semibold text-blue-700 dark:text-blue-400">Payer:</span>{typeof payer === "string" ? <EnsOrAddress address={payer} /> : <span>-</span>}</div>
-          <div className="flex items-center gap-2"><span className="font-semibold text-blue-700 dark:text-blue-400">Payee:</span>{typeof payee === "string" ? <EnsOrAddress address={payee} /> : <span>-</span>}</div>
-          <div className="flex items-center gap-2"><span className="font-semibold text-blue-700 dark:text-blue-400">Amount:</span><span>{typeof amount === "bigint" ? `${Number(amount) / 1e18} IDRX` : "-"}</span></div>
-          <div className="flex items-center gap-2"><span className="font-semibold text-blue-700 dark:text-blue-400">Timeout:</span><span>{timeout ? new Date(Number(timeout) * 1000).toLocaleString() : "-"}</span></div>
-          <div className="flex items-center gap-2">
-            <span className="font-semibold text-blue-700 dark:text-blue-400">Proof:</span>
-            {typeof proof === "string" && proof ? (
-              <a href={proof} className="text-blue-600 underline font-bold hover:text-blue-900 transition" target="_blank" rel="noopener noreferrer" aria-label="View submitted proof">{proof}</a>
-            ) : (
-              <span>-</span>
-            )}
-          </div>
-        </div>
-        <div className="my-6 w-full animate-fade-in">
-          <TxStepper state={txState} explorerUrl="https://sepolia.basescan.org" />
-        </div>
-        <div className="mt-8 flex flex-col gap-4 w-full animate-fade-in">
-          {isPayer && statusNum === 0 && (
-            <button className="btn btn-primary w-full animate-bounce-in text-lg font-bold shadow-lg" onClick={handleDeposit}>Deposit (Fund Escrow)</button>
+
+        {/* Status — large and clear */}
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm"
+        >
+          <p className="text-sm font-medium text-slate-500 mb-1">Status</p>
+          <p className="text-2xl font-bold text-darknavy">{statusLabel}</p>
+          {state.status === 'funded' && (
+            <>
+              <p className="mt-1 text-sm text-slate-600">Waiting for delivery. Payee can submit proof; then payer/arbiter can release.</p>
+              {canApproveOrRefund && (
+                <p className="mt-1 text-sm font-medium text-primary">Ready to release — use the action below to release funds to payee.</p>
+              )}
+            </>
           )}
-          {proofInput && <div className="animate-fade-in">{proofInput}</div>}
-          {approveButton && <div className="animate-fade-in">{approveButton}</div>}
-          {refundButton && <div className="animate-fade-in">{refundButton}</div>}
-          {claimButton && <div className="animate-fade-in">{claimButton}</div>}
-        </div>
-        {txState === "pending" && <div className="animate-pulse bg-slate-100 h-10 w-full rounded mb-2" />}
-        {/* Error handled by notification toast */}
-        <div className="text-xs text-gray-400 mt-8">Actions and data update based on contract state and user role.</div>
-        <div className="mt-12 w-full animate-fade-in">
-          <h3 className="font-bold text-3xl mb-3 logo text-blue-700 dark:text-blue-400">Recent On‑Chain Events</h3>
-          <EventFeed events={eventsFeed} />
-        </div>
-        <div className="mt-8 w-full animate-fade-in">
-          <h3 className="font-bold text-3xl mb-3 logo text-blue-700 dark:text-blue-400">Transaction History</h3>
-          <TxHistory address={address as string} />
-        </div>
-      </section>
-    </main>
-  );
-}
+        </motion.div>
 
-function EventFeed({ events }: { events: EventFeedItem[] }) {
-  if (!events || events.length === 0) return (
-    <div className="flex flex-col items-center gap-2 text-gray-400 animate-fade-in">
-      <span className="text-3xl">🔔</span>
-      <div>No recent events.</div>
-    </div>
-  );
-  return (
-    <ul className="space-y-2 max-h-56 overflow-auto rounded-lg border border-slate-100 bg-white/60 p-2">
-      {events.map((ev, i) => (
-        <li key={i} className="flex items-start gap-3 p-3 rounded hover:bg-slate-50">
-          <div className="w-12 text-sm font-mono text-slate-500">{ev.blockNumber ?? '-'}</div>
-          <div className="flex-1">
-            <div className="text-sm font-semibold logo">{ev.name}</div>
-            <div className="text-xs text-slate-500 truncate">{ev.txHash ? (<a href={`https://sepolia.basescan.org/tx/${ev.txHash}`} target="_blank" rel="noreferrer" className="logo">{ev.txHash}</a>) : '—'}</div>
-            <div className="text-xs text-slate-600 mt-1">{ev.args ? JSON.stringify(ev.args) : ''}</div>
+        {/* Amount — mono */}
+        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+          <p className="text-sm font-medium text-slate-500 mb-1">Amount</p>
+          <p className="font-mono text-2xl font-bold text-darknavy">{formatAmount(state.amount)} ETH</p>
+        </div>
+
+        {state.milestones && (
+          <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+            <p className="text-sm font-medium text-slate-500 mb-2">Milestones</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {state.milestones.map((m, i) => (
+                <div key={i} className="rounded-lg border border-slate-200 p-4">
+                  <p className="text-sm text-slate-500">Milestone {i + 1}</p>
+                  <p className="font-mono text-lg text-darknavy">{ethers.formatEther(m.amount)} IDRX</p>
+                  <p className="text-sm text-slate-600 mt-1">{m.funded ? 'Funded' : 'Not funded'} · {m.submitted ? 'Proof submitted' : 'No proof'} · {m.released ? 'Released' : 'Pending'}</p>
+                  {isPayer && !m.funded && i === 1 && (
+                    <button onClick={doFund} className="btn-outline mt-3">Fund milestone 2</button>
+                  )}
+                  {isPayee && m.funded && !m.submitted && i === 0 && (
+                    <button onClick={() => doSubmitProof(prompt('Enter proof URL') || '')} className="btn-outline mt-3">Submit proof (M1)</button>
+                  )}
+                  {canApproveOrRefund && m.funded && m.submitted && !m.released && i === 0 && (
+                    <div className="mt-3 flex gap-2">
+                      <button onClick={doApprove} className="btn-primary">Approve M1</button>
+                      <button onClick={doRefund} className="btn-outline">Refund M1</button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
-        </li>
-      ))}
-    </ul>
-  );
-}
+        )}
 
-// Transaction history component (BaseScan links for all events)
-// ...existing code...
-function TxHistory({ address }: { address: string }) {
-  const [txs, setTxs] = useState<{ hash: string; method?: string; functionName?: string; timeStamp: string }[]>([]);
-  useEffect(() => {
-    async function fetchTxs() {
-      // Use BaseScan API or public endpoint for demo (replace with your API key for production)
-      const url = `https://api-sepolia.basescan.org/api?module=account&action=txlist&address=${address}&sort=asc`;
-      try {
-        const res = await fetch(url);
-        const data = await res.json();
-        if (data.status === "1") setTxs(data.result);
-      } catch {}
-    }
-    fetchTxs();
-  }, [address]);
-  if (!txs.length) return (
-    <div className="flex flex-col items-center gap-2 text-gray-400 animate-fade-in">
-      <span className="text-3xl">📄</span>
-      <div>No transactions found.</div>
+        {/* Countdown */}
+        {showCountdown && state.fundedAt && (
+          <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+            <p className="text-sm font-medium text-slate-500 mb-1">Refund available after (30 days)</p>
+            <Countdown fundedAt={state.fundedAt} />
+          </div>
+        )}
+
+        {/* Contract address — copyable */}
+        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+          <p className="text-sm font-medium text-slate-500 mb-2">Contract address</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-mono text-sm text-text break-all">{address}</span>
+            <button
+              type="button"
+              onClick={() => {
+                navigator.clipboard.writeText(address);
+                notify('success', 'Address copied.');
+              }}
+              className="shrink-0 px-3 py-1.5 rounded-lg border border-slate-200 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            >
+              Copy
+            </button>
+            <a
+              href={addressUrl(address)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="shrink-0 px-3 py-1.5 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primaryHover transition-colors"
+            >
+              BaseScan
+            </a>
+          </div>
+        </div>
+
+        {/* Parties */}
+        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm space-y-3">
+          <p className="text-sm font-medium text-slate-500">Payer</p>
+          <p className="font-mono text-sm text-text break-all">{state.payer ?? '—'}</p>
+          <p className="text-sm font-medium text-slate-500 mt-4">Payee</p>
+          <p className="font-mono text-sm text-text break-all">{state.payee ?? '—'}</p>
+        </div>
+
+        {/* Actions — role-based */}
+        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm space-y-3">
+          <p className="text-sm font-medium text-slate-500 mb-4">Actions</p>
+          {state.status === 'created' && isPayer && (
+            <button
+              type="button"
+              onClick={doFund}
+              disabled={busy}
+              className="btn-primary w-full disabled:opacity-50"
+            >
+              {loadingAction === 'fund' ? 'Processing…' : 'Deposit funds'}
+            </button>
+          )}
+          {state.status === 'funded' && isPayee && (
+            <button
+              type="button"
+              onClick={() => {
+                const url = prompt('Proof URL (e.g. link to deliverable):');
+                if (url) doSubmitProof(url);
+              }}
+              disabled={busy}
+              className="btn-primary w-full disabled:opacity-50"
+            >
+              {loadingAction === 'proof' ? 'Processing…' : 'Submit proof'}
+            </button>
+          )}
+          {state.status === 'funded' && canApproveOrRefund && (
+            <>
+              <button
+                type="button"
+                onClick={doApprove}
+                disabled={busy}
+                className="w-full rounded-lg bg-success text-white font-semibold py-2.5 px-4 hover:bg-green-600 disabled:opacity-50"
+              >
+                {loadingAction === 'approve' ? 'Processing…' : 'Release to payee'}
+              </button>
+              <button
+                type="button"
+                onClick={doRefund}
+                disabled={busy}
+                className="w-full rounded-lg border-2 border-danger text-danger font-semibold py-2.5 px-4 hover:bg-red-50 disabled:opacity-50"
+              >
+                {loadingAction === 'refund' ? 'Processing…' : 'Refund to payer'}
+              </button>
+            </>
+          )}
+          {state.status === 'funded' && isPayer && state.fundedAt && (() => {
+            const elapsed = Date.now() / 1000 - state.fundedAt;
+            if (elapsed >= ESCROW_TIMEOUT_SECONDS) {
+              return (
+                <button
+                  type="button"
+                  onClick={doClaimTimeout}
+                  disabled={busy}
+                  className="w-full rounded-lg bg-warning text-white font-semibold py-2.5 px-4 hover:bg-amber-600 disabled:opacity-50"
+                >
+                  {loadingAction === 'claim' ? 'Processing…' : 'Claim refund (timeout)'}
+                </button>
+              );
+            }
+            return null;
+          })()}
+          {!wallet?.address && (
+            <p className="text-sm text-slate-500">Connect your wallet to see actions.</p>
+          )}
+        </div>
+      </div>
     </div>
-  );
-  return (
-    <ul className="space-y-2">
-      {txs.map(tx => (
-        <li key={tx.hash} className="flex items-center gap-2 text-xs transition-all hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded p-1">
-          <a href={`https://sepolia.basescan.org/tx/${tx.hash}`} target="_blank" rel="noopener noreferrer" className="text-blue-700 dark:text-blue-300 hover:underline font-mono truncate max-w-xs">{tx.hash.slice(0, 10)}...{tx.hash.slice(-6)}</a>
-          <span className="text-gray-500 dark:text-gray-300">{tx.method || tx.functionName || "Tx"}</span>
-          <span className="text-gray-400">{new Date(Number(tx.timeStamp) * 1000).toLocaleString()}</span>
-        </li>
-      ))}
-    </ul>
   );
 }
